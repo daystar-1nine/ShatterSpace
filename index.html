@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Stellar Drifter</title>
-    <!-- Import Sci-Fi Font -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body, html {
@@ -118,7 +117,7 @@
         }
         .info-modal-content {
             background: rgba(10, 10, 25, 0.95); border: 2px solid #00ffff; padding: 30px;
-            max-width: 500px; border-radius: 10px; box-shadow: 0 0 30px rgba(0,255,255,0.2);
+            max-width: 500px; border-radius: 10px; box-shadow: 0 0 30px rgba(0,255,255,0.2); box-sizing: border-box;
         }
         .info-modal h2 { font-weight: 900; color: #ffaa00; letter-spacing: 2px; text-shadow: 0 0 10px #ffaa00; margin-top: 0; border-bottom: 1px solid #555; padding-bottom: 10px;}
         
@@ -128,13 +127,52 @@
             color: #888; font-weight: bold; border-radius: 10px; overflow: hidden;
         }
 
+        #portrait-warning {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050510; z-index: 9999; color: #00ffff;
+            align-items: center; justify-content: center; flex-direction: column;
+            text-align: center; font-family: 'Orbitron', sans-serif; padding: 20px; box-sizing: border-box;
+        }
+        #portrait-warning h2 { color: #ff3333; text-shadow: 0 0 10px red; letter-spacing: 2px; }
+
         @keyframes mult-flash { 0% { transform: scale(1); } 50% { transform: scale(1.4); filter: brightness(1.5); } 100% { transform: scale(1); } }
         .mult-flash { animation: mult-flash 0.3s ease-out; }
+
+        /* MOBILE OPTIMIZATION CSS */
+        @media screen and (max-width: 900px) and (orientation: landscape) {
+            #portrait-warning { display: flex; }
+            #menu, #ui, canvas, .overlay-menu, .info-modal { display: none !important; }
+        }
+
+        @media screen and (max-width: 768px) {
+            #menu-title { font-size: 32px; letter-spacing: 2px; }
+            .menu-stats { font-size: 14px; }
+            .menu-xp { font-size: 12px; }
+            .btn { font-size: 14px; padding: 10px 20px; }
+            .icon-btn { width: 45px; height: 45px; font-size: 20px; }
+            .menu-icons { bottom: 30px; }
+            
+            #ui h1 { font-size: 14px; }
+            #score-container { font-size: 18px; }
+            .stats-row, .round-stats { font-size: 11px; }
+            .bar-bg { width: 100px; height: 6px; }
+            .bar-container { font-size: 10px; }
+            
+            .info-modal-content { width: 90%; padding: 20px; }
+            .shop-item { width: 130px; padding: 10px; }
+            .shop-section-title { font-size: 14px; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="version-tag">v1.0 (Beta Release)</div>
+    <!-- PORTRAIT LOCK WARNING -->
+    <div id="portrait-warning">
+        <h2>⚠️ ROTATE DEVICE</h2>
+        <p style="color: #88aaff;">Please rotate your phone to portrait mode to play Stellar Drifter.</p>
+    </div>
+
+    <div id="version-tag">v1.0.01 (Beta Release)</div>
 
     <!-- MAIN MENU -->
     <div id="menu" class="overlay-menu">
@@ -151,7 +189,6 @@
             <button id="btn-open-patch" class="icon-btn" title="Patch Notes">📄</button>
             <button id="btn-open-coffee" class="icon-btn" title="Support Dev">☕</button>
             <button id="btn-open-credits" class="icon-btn" title="Credits">🏆</button>
-            <!-- WIPE SAVE MOVED HERE -->
             <button id="btn-open-wipe" class="icon-btn" style="border-color: #ff4444; color: #ff4444; box-shadow: 0 0 10px rgba(255,68,68,0.2);" title="Wipe Save">☠️</button>
         </div>
         <div class="footer-text">Made with ❤️ By Dev</div>
@@ -162,11 +199,11 @@
         <div class="info-modal-content">
             <h2>PATCH NOTES</h2>
             <ul style="text-align: left; line-height: 1.6; color: #88aaff; font-size: 14px; margin-bottom: 25px;">
+                <li><b>Mobile Optimization:</b> Camera is now zoomed out on mobile devices. UI completely overhauled to prevent overlapping.</li>
                 <li><b>Progression Fix:</b> Bosses now freeze Phase progression safely. Next Phase triggers correctly after Boss kill.</li>
                 <li><b>Prestige Max 30:</b> You can now prestige up to 30 times. Each grants a massive +1.0x (100%) multiplier to score and credits!</li>
                 <li><b>Visuals & Trails:</b> Sci-Fi Font imported. Player ships and Aliens now leave sleek particle engine trails.</li>
                 <li><b>Lightweight BGs:</b> Added 'Synthwave' and 'Digital Rain' backgrounds optimized for performance.</li>
-                <li><b>Clean UI:</b> Moved settings and wipes to bottom icons. Death screen now tracks exact cause of death.</li>
             </ul>
             <button class="btn close-modal-btn">CLOSE</button>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
@@ -179,7 +216,7 @@
             <h2>BUY DEV A COFFEE ☕</h2>
             <p style="color: #88aaff; font-size: 14px; line-height: 1.5;">If you enjoy Stellar Drifter and want to support the development of future features, consider leaving a tip!</p>
             <div class="qr-placeholder">
-                <img src="https://i.postimg.cc/dtKsPgZd/IMG-20260714-210043.jpg" style="width:100%; height:100%; object-fit: contain;">
+                [ YOUR QR CODE HERE ]
             </div>
             <button class="btn close-modal-btn">CLOSE</button>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
@@ -214,14 +251,14 @@
 
     <!-- LORE / PURCHASE MODAL -->
     <div id="modal-lore" class="info-modal" style="z-index: 60;">
-        <div class="info-modal-content" style="max-width: 400px;">
+        <div class="info-modal-content">
             <h2 id="lore-title" style="color: #ffaa00; border: none; margin-bottom: 5px;">TITLE</h2>
             <div class="shop-icon-preview" id="lore-icon" style="justify-content: center; font-size: 50px; margin: 15px 0;">🚀</div>
             <p id="lore-desc" style="color: #88aaff; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">Lore description goes here.</p>
             <div id="lore-cost" style="color: #33ff88; font-size: 22px; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 5px currentColor;">COST: $0</div>
-            <div>
-                <button id="lore-buy-btn" class="btn" style="padding: 10px 20px; font-size: 16px;">PURCHASE</button>
-                <button id="lore-cancel-btn" class="btn" style="padding: 10px 20px; font-size: 16px; border-color: #ff4444; color: #ff4444;">CANCEL</button>
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                <button id="lore-buy-btn" class="btn" style="padding: 10px 20px; font-size: 14px;">PURCHASE</button>
+                <button id="lore-cancel-btn" class="btn" style="padding: 10px 20px; font-size: 14px; border-color: #ff4444; color: #ff4444;">CANCEL</button>
             </div>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
         </div>
@@ -318,8 +355,30 @@
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        let width = canvas.width = window.innerWidth;
-        let height = canvas.height = window.innerHeight;
+        let width, height;
+
+        // VIRTUAL RESOLUTION & ZOOM SCALING FOR MOBILE
+        function resizeCanvas() {
+            let winW = window.innerWidth;
+            let winH = window.innerHeight;
+            
+            // If on a narrow screen (mobile), enforce a wider internal virtual width to zoom everything out!
+            if (winW < 768) {
+                width = canvas.width = 800;
+                height = canvas.height = 800 * (winH / winW);
+            } else {
+                width = canvas.width = winW;
+                height = canvas.height = winH;
+            }
+            
+            // Always stretch canvas to fill screen physically
+            canvas.style.width = winW + 'px';
+            canvas.style.height = winH + 'px';
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function getScale() { return canvas.width / window.innerWidth; }
 
         // --- AUDIO SYSTEM ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -428,7 +487,7 @@
         let gameActive = false;
         let score = 0, roundCredits = 0;
         let comboMultiplier = 1.0;
-        let prestigeMult = 1.0 + prestigeCount; // 1 prestige = 2x, 30 prestige = 31x
+        let prestigeMult = 1.0 + prestigeCount; 
         let globalSpeed = 1.0; 
         let screenShake = 0;
         let activePowerup = null;
@@ -454,9 +513,12 @@
         function calcNextXp() { let lvl = calcLevel(); return lvl * lvl * 1000; }
 
         function updateInputPos(clientX, clientY) {
-            let dx = clientX - mouse.x; let dy = clientY - mouse.y;
+            let scale = getScale();
+            let scaledX = clientX * scale;
+            let scaledY = clientY * scale;
+            let dx = scaledX - mouse.x; let dy = scaledY - mouse.y;
             if (dx !== 0 || dy !== 0) mouse.angle = Math.atan2(dy, dx);
-            mouse.x = clientX; mouse.y = clientY;
+            mouse.x = scaledX; mouse.y = scaledY;
         }
 
         function handleTap() {
@@ -475,13 +537,12 @@
             floatingTexts.push(new FloatingText(width/2, height/2 - 50, "EMP DEPLOYED", "#ff00ff"));
         }
 
-        window.addEventListener('mousemove', (e) => updateInputPos(e.clientX, e.clientY));
-        window.addEventListener('mousedown', handleTap);
-        window.addEventListener('mouseup', () => mouse.clicked = false);
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); updateInputPos(e.touches[0].clientX, e.touches[0].clientY); handleTap(); }, { passive: false });
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); updateInputPos(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
         canvas.addEventListener('touchend', (e) => { e.preventDefault(); mouse.clicked = false; }, { passive: false });
-        window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
+        window.addEventListener('mousemove', (e) => updateInputPos(e.clientX, e.clientY));
+        window.addEventListener('mousedown', handleTap);
+        window.addEventListener('mouseup', () => mouse.clicked = false);
 
         function triggerShake(amount) { screenShake = Math.max(screenShake, amount); }
 
@@ -508,7 +569,6 @@
 
             uiHighscore.innerText = savedHighScore;
 
-            // Render text for standard main buttons for display ONLY (click is handled by Lore Modal)
             document.querySelectorAll('.buy-btn:not([data-type="multitier"])').forEach(btn => {
                 const type = btn.getAttribute('data-type'); const val = btn.getAttribute('data-val'); const cost = parseInt(btn.getAttribute('data-cost'));
                 let isUnlocked = (type === 'ship' && unlockedShips.includes(val)) || (type === 'bg' && unlockedBGs.includes(val)) || (type === 'upgrade' && unlockedUpgrades.includes(val));
@@ -695,7 +755,7 @@
             constructor(x, y, vx, vy, color, isTrail = false) { 
                 this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.color = color; this.life = 1.0; 
                 this.decay = isTrail ? (Math.random() * 0.05 + 0.05) : (Math.random() * 0.03 + 0.02); 
-                this.size = isTrail ? (Math.random() * 2 + 1) : (Math.random() * 2 + 1); 
+                this.size = isTrail ? (Math.random() * 3 + 1.5) : (Math.random() * 2 + 1); 
             }
             update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1.0; }
         }
@@ -756,7 +816,7 @@
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
             } else if (equippedBG === 'matrix') {
                 ctx.fillStyle = '#00ff00'; gridOffset = (gridOffset + globalSpeed * 2) % 200;
-                for(let i=0; i<20; i++) { ctx.fillRect((i*100 + gridOffset*2)%width, (i*200 + gridOffset*5)%height, 2, 20); }
+                for(let i=0; i<30; i++) { ctx.fillRect((i*80 + gridOffset*2)%width, (i*150 + gridOffset*5)%height, 2, 25); }
             } else if (equippedBG === 'neon') {
                 ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)'; ctx.lineWidth = 2; gridOffset = (gridOffset + globalSpeed * 2) % 40;
                 ctx.beginPath();
@@ -784,9 +844,8 @@
             else if (equippedShip === 'wraith') shipBaseColor = '#b066ff';
             else if (equippedShip === 'void') shipBaseColor = '#ff00ff';
 
-            // Add Trails
-            if (gameActive && Math.random() > 0.4) {
-                trailParticles.push(new Particle(mouse.x + (Math.random()*10-5), mouse.y + 10, 0, 2 + Math.random()*2, shipBaseColor, true));
+            if (gameActive && Math.random() > 0.3) {
+                trailParticles.push(new Particle(mouse.x + (Math.random()*10-5), mouse.y + 15, 0, 3 + Math.random()*2, shipBaseColor, true));
             }
 
             if (type === 'striker') {
@@ -999,6 +1058,7 @@
             }
             update(index) {
                 if (this.y < 120) this.y += 2; else this.x += Math.sin(Date.now() / (this.type==='interceptor'?400:600)) * (this.type==='interceptor'?5:3);
+                this.x = Math.max(this.radius, Math.min(width - this.radius, this.x)); // Clamped to screen
 
                 let fireChance = this.type === 'interceptor' ? 0.96 : (this.type === 'dreadnought' ? 0.94 : 0.92);
                 if (Math.random() > fireChance) {
@@ -1035,7 +1095,6 @@
                     uiRoundCredits.innerText = roundCredits.toFixed(2); uiRoundXp.innerText = score; flashScoreBoard();
                     floatingTexts.push(new FloatingText(this.x, this.y, "BOSS DEFEATED +$" + csh.toFixed(2), "#ff00ff"));
                     
-                    // RECALCULATE PROGRESSION AROUND CURRENT SCORE (FIXES PHASE SKIPPING)
                     targetNextPhaseScore = score + 2500;
                     targetNextBossScore = score + 10000;
                     phase++;
@@ -1197,10 +1256,11 @@
                     phaseTimer--; ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, phaseTimer / 30)})`;
                     ctx.font = "bold 60px Orbitron"; ctx.textAlign = "center";
                     ctx.fillText("PHASE " + phase, width/2, height/2 - 100); ctx.textAlign = "left"; 
-                } else {
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.5)"; ctx.font = "bold 24px Orbitron"; ctx.textAlign = "right";
-                    ctx.fillText("PHASE " + phase, width - 20, 40); ctx.textAlign = "left";
-                }
+                } 
+                
+                // Moved Phase text to bottom left
+                ctx.fillStyle = "rgba(255, 255, 255, 0.5)"; ctx.font = "bold 24px Orbitron"; ctx.textAlign = "left";
+                ctx.fillText("PHASE " + phase, 20, height - 30);
             }
 
             ctx.restore(); requestAnimationFrame(animate);
