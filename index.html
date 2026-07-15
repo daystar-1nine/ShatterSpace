@@ -6,7 +6,7 @@
     <title>Stellar Drifter</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #050510; overflow: hidden; font-family: 'Orbitron', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #050510; overflow: hidden; font-family: 'Orbitron', sans-serif; user-select: none; }
         canvas { display: block; touch-action: none; }
         
         #ui { position: absolute; top: 20px; left: 20px; right: 20px; color: rgba(200, 220, 255, 0.7); pointer-events: none; display: none; text-transform: uppercase; letter-spacing: 1px; z-index: 5; }
@@ -26,14 +26,23 @@
         
         .overlay-menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 16, 0.85); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; color: white; text-align: center; }
         #menu-title { font-size: 52px; font-weight: 900; letter-spacing: 5px; margin-bottom: 5px; color: #fff; text-shadow: 0 0 15px rgba(0, 255, 255, 0.6); }
-        #death-cause { font-size: 20px; color: #ffaa00; margin-bottom: 20px; letter-spacing: 2px; }
 
         .menu-stats { color: #88aaff; font-size: 18px; margin-bottom: 10px; letter-spacing: 2px; font-weight: 700; }
         .menu-xp { color: #33ff88; font-size: 14px; margin-bottom: 30px; font-weight: 700; }
 
+        /* GLOBAL BUTTON UX */
         .btn { background: rgba(0, 0, 0, 0.5); color: #00ffff; border: 2px solid #00ffff; padding: 15px 35px; font-size: 18px; font-family: 'Orbitron', sans-serif; font-weight: 700; cursor: pointer; letter-spacing: 2px; transition: all 0.2s; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.2); margin: 10px; text-transform: uppercase; }
-        .btn:hover:not(:disabled) { background: #00ffff; color: #000; box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); transform: scale(1.05); }
+        .btn:hover:not(:disabled) { background: #000 !important; color: #fff !important; box-shadow: 0 0 25px currentColor; transform: scale(1.05); }
+        .btn:active:not(:disabled) { transform: scale(0.95); }
         .btn:disabled { border-color: #555 !important; color: #555 !important; box-shadow: none !important; cursor: not-allowed; }
+
+        /* SAFE REAL-TIME SHOP BUTTON ANIMATION */
+        @keyframes purchaseFlash {
+            0% { transform: scale(0.92); filter: drop-shadow(0 0 20px #33ff88) brightness(1.5); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 30px #33ff88) brightness(1.5); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 0px transparent) brightness(1); }
+        }
+        .btn-buy-flash { animation: purchaseFlash 0.3s ease-out; }
 
         #shop { display: none; justify-content: flex-start; padding-top: 50px; overflow-y: auto; }
         .shop-section-title { margin: 30px 0 15px 0; color: #fff; letter-spacing: 3px; border-bottom: 1px solid #555; padding-bottom: 5px; width: 80%; max-width: 800px; text-align: left; }
@@ -45,12 +54,17 @@
         .buy-btn { padding: 10px 15px; font-size: 14px; width: 100%; margin: 0; }
 
         #in-game-menu-btn { background: rgba(0, 255, 255, 0.1); color: #00ffff; border: 1px solid #00ffff; padding: 5px 15px; font-size: 24px; font-weight: bold; cursor: pointer !important; transition: all 0.2s; }
-        #in-game-menu-btn:hover { background: #00ffff; color: #000; }
 
-        #shield-indicator, #powerup-indicator, #emp-indicator { display: none; font-weight: bold; margin-top: 5px; font-size: 12px; }
+        #shield-indicator, #powerup-indicator { display: none; font-weight: bold; margin-top: 5px; font-size: 12px; }
         #shield-indicator { color: #33ff88; text-shadow: 0 0 5px #33ff88; }
         #powerup-indicator { color: #00ffff; text-shadow: 0 0 5px #00ffff; }
-        #emp-indicator { color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
+
+        /* HUD ABILITIES - v1.3.1 */
+        #hud-abilities { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; pointer-events: none; }
+        .hud-btn { width: 55px; height: 55px; border-radius: 50%; background: rgba(0,0,0,0.8); border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; overflow: hidden; transition: 0.2s; pointer-events: auto; }
+        .hud-btn.ready { box-shadow: 0 0 15px currentColor; }
+        .hud-btn:active { transform: scale(0.9); }
+        .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); height: 100%; transition: height 0.1s linear; }
 
         .progress-dots { display: flex; gap: 3px; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #333; border: 1px solid #777;}
@@ -58,25 +72,76 @@
         
         #version-tag { position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.4); font-size: 12px; font-weight: bold; z-index: 100; pointer-events: none; }
         #prestige-btn { border-color: #ff00ff; color: #ff00ff; display: none; margin-top: 20px; }
-        #prestige-btn:hover { background: #ff00ff; color: #fff; box-shadow: 0 0 25px rgba(255, 0, 255, 0.6); }
 
         .menu-icons { position: absolute; bottom: 40px; display: flex; gap: 20px; justify-content: center; width: 100%; }
         .icon-btn { background: rgba(0, 255, 255, 0.1); border: 2px solid #00ffff; color: #00ffff; font-size: 24px; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); }
-        .icon-btn:hover { background: #00ffff; color: #000; transform: scale(1.15); box-shadow: 0 0 20px #00ffff; }
+        .icon-btn:hover { background: #000 !important; color: #fff !important; transform: scale(1.15); box-shadow: 0 0 20px #00ffff; }
 
         .footer-text { position: absolute; bottom: 10px; width: 100%; text-align: center; color: rgba(255,255,255,0.3); font-size: 12px; font-weight: bold; letter-spacing: 1px; z-index: 100; pointer-events: none;}
         .footer-text-modal { margin-top: 30px; text-align: center; color: rgba(255,255,255,0.3); font-size: 12px; font-weight: bold; letter-spacing: 1px; }
 
-        .info-modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 50; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; }
-        .info-modal-content { background: rgba(10, 10, 25, 0.95); border: 2px solid #00ffff; padding: 30px; max-width: 500px; border-radius: 10px; box-shadow: 0 0 30px rgba(0,255,255,0.2); box-sizing: border-box; max-height: 90%; overflow-y: auto;}
-        .info-modal h2 { font-weight: 900; color: #ffaa00; letter-spacing: 2px; text-shadow: 0 0 10px #ffaa00; margin-top: 0; border-bottom: 1px solid #555; padding-bottom: 10px;}
-        
+        /* MODALS */
+        .info-modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 50; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; padding: 20px; box-sizing: border-box; }
+        .info-modal-content { position: relative; background: rgba(10, 10, 25, 0.95); border: 2px solid #00ffff; padding: 25px 30px; max-width: 500px; width: 100%; border-radius: 10px; box-shadow: 0 0 30px rgba(0,255,255,0.2); box-sizing: border-box; max-height: 85%; overflow-y: auto;}
+
+        /* FIXED FLOATING CLOSE BUTTON */
+        .btn-close-floating {
+            position: absolute; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%;
+            background: #0a0a19; border: 2px solid #ff4444; color: #ff4444; font-size: 20px;
+            font-family: Arial, sans-serif; font-weight: bold; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+            transition: all 0.2s; padding: 0; margin: 0;
+        }
+        .btn-close-floating:hover { background: #ff4444 !important; color: #fff !important; transform: scale(1.15); box-shadow: 0 0 25px #ff4444; }
+
+        .info-modal h2 { font-weight: 900; color: #ffaa00; letter-spacing: 2px; text-shadow: 0 0 10px #ffaa00; margin: 0 0 5px 0; border-bottom: 1px solid #555; padding-bottom: 10px;}
         .qr-placeholder { width: 200px; height: 200px; background: #222; border: 3px solid #ffaa00; margin: 20px auto; display: flex; justify-content: center; align-items: center; color: #888; font-weight: bold; border-radius: 10px; overflow: hidden; }
 
+        /* SCROLLABLE PATCH NOTES */
+        .patch-notes-container {
+            max-height: 50vh; overflow-y: auto; padding-right: 15px; margin-top: 15px;
+            background: rgba(0,0,0,0.4); border: 1px solid #444; border-radius: 8px; padding: 15px;
+        }
+        .patch-notes-container::-webkit-scrollbar { width: 6px; }
+        .patch-notes-container::-webkit-scrollbar-thumb { background: #00ffff; border-radius: 3px; }
+        .patch-notes-container h3 { color: #ffaa00; font-size: 16px; margin: 10px 0 5px 0; border-bottom: 1px dashed #555; padding-bottom: 5px; text-align: left; }
+        .patch-notes-container ul { text-align: left; line-height: 1.6; color: #88aaff; font-size: 13px; margin-top: 5px; margin-bottom: 20px; padding-left: 20px; }
+        
         #portrait-warning { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050510; z-index: 9999; color: #00ffff; align-items: center; justify-content: center; flex-direction: column; text-align: center; font-family: 'Orbitron', sans-serif; padding: 20px; box-sizing: border-box; }
         #portrait-warning h2 { color: #ff3333; text-shadow: 0 0 10px red; letter-spacing: 2px; }
 
-        /* Achievements Styling */
+        /* PERFECTLY CENTERED MISSION REPORT CARD */
+        .mission-report-card {
+            background: rgba(10, 10, 25, 0.95); border: 2px solid #ff3333; border-radius: 16px; padding: 30px 40px; max-width: 500px; width: 85%;
+            box-shadow: 0 0 50px rgba(255, 51, 51, 0.3), inset 0 0 25px rgba(255, 51, 51, 0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; backdrop-filter: blur(12px); box-sizing: border-box; text-align: center; 
+        }
+        .report-header { margin-bottom: 15px; width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; }
+        #ds-title { color: #ff3333; text-shadow: 0 0 20px rgba(255,0,0,0.8); font-size: 36px; margin: 0 0 10px 0; letter-spacing: 4px; font-weight: 900; text-align: center; width: 100%; }
+        #death-cause-pill { background: rgba(255, 170, 0, 0.1); border: 1px solid #ffaa00; padding: 6px 20px; border-radius: 30px; font-size: 13px; font-weight: bold; letter-spacing: 2px; color: #ffaa00; display: inline-block; box-shadow: 0 0 15px rgba(255,170,0,0.2); text-transform: uppercase; margin: 0 auto; }
+        .report-divider { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, #555, transparent); margin: 20px 0; }
+        
+        .stats-grid { display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: center; }
+        .stat-box { background: rgba(0, 0, 0, 0.6); border: 1px solid #444; border-radius: 10px; padding: 15px 20px; width: 100%; box-sizing: border-box; position: relative; overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .score-box { border-color: #00ffff; box-shadow: inset 0 0 15px rgba(0,255,255,0.1); }
+        .credits-box { border-color: #33ff88; box-shadow: inset 0 0 15px rgba(51,255,136,0.1); }
+        .stat-label { font-size: 11px; color: #88aaff; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; text-align: center; width: 100%; }
+        .stat-value { font-size: 32px; font-weight: 900; letter-spacing: 2px; text-align: center; width: 100%; display: flex; justify-content: center; align-items: center; }
+        .score-box .stat-value { color: #fff; text-shadow: 0 0 10px #00ffff; }
+        .credits-box .stat-value { color: #33ff88; text-shadow: 0 0 10px #33ff88; }
+        
+        .breakdown-tag { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #444; font-size: 12px; color: #aaa; display: flex; justify-content: center; gap: 20px; align-items: center; width: 100%; font-weight: bold; letter-spacing: 1px; text-align: center; }
+        .mult-badge { background: rgba(255, 0, 255, 0.2); color: #ff00ff; border: 1px solid #ff00ff; padding: 3px 10px; border-radius: 6px; font-weight: bold; text-shadow: 0 0 5px #ff00ff; }
+        
+        .action-buttons { display: flex; gap: 15px; width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 5px; }
+        .main-action-btn { background: rgba(0, 255, 255, 0.1); color: #00ffff; border-color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.3); flex: 1; min-width: 140px; margin: 0; padding: 14px 20px; font-size: 15px; }
+        .sub-action-btn { background: rgba(255, 170, 0, 0.1); color: #ffaa00; border-color: #ffaa00; box-shadow: 0 0 15px rgba(255,170,0,0.3); flex: 1; min-width: 140px; margin: 0; padding: 14px 20px; font-size: 15px; }
+
+        /* Achievements Tabs */
+        .ach-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #555; padding-bottom: 15px; clear: both; }
+        .ach-tab-btn { background: rgba(0,0,0,0.5); border: 1px solid #555; color: #888; padding: 8px 12px; font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s; letter-spacing: 1px; }
+        .ach-tab-btn.active { background: rgba(0, 255, 255, 0.15); border-color: #00ffff; color: #00ffff; box-shadow: 0 0 10px rgba(0,255,255,0.2); }
+        .ach-tab-btn:hover { background: #000; color: #fff; border-color: #00ffff; }
+
         .ach-item { display: flex; align-items: center; background: rgba(0,0,0,0.5); border: 1px solid #555; padding: 15px; margin-bottom: 10px; border-radius: 8px; text-align: left;}
         .ach-icon { font-size: 30px; margin-right: 15px; filter: grayscale(100%); opacity: 0.3; }
         .ach-text h4 { margin: 0 0 5px 0; color: #fff; font-size: 14px; }
@@ -100,9 +165,6 @@
         #ach-popup-text h4 { margin: 0; color: #ffaa00; font-size: 14px; font-weight: 900; letter-spacing: 1px; }
         #ach-popup-text p { margin: 2px 0 0 0; color: #fff; font-size: 12px; }
 
-        @keyframes mult-flash { 0% { transform: scale(1); } 50% { transform: scale(1.4); filter: brightness(1.5); } 100% { transform: scale(1); } }
-        .mult-flash { animation: mult-flash 0.3s ease-out; }
-
         @media screen and (max-width: 900px) and (orientation: landscape) { #portrait-warning { display: flex; } #menu, #ui, canvas, .overlay-menu, .info-modal { display: none !important; } }
         @media screen and (max-width: 768px) {
             #menu-title { font-size: 32px; letter-spacing: 2px; }
@@ -110,21 +172,25 @@
             .icon-btn { width: 45px; height: 45px; font-size: 20px; } .menu-icons { bottom: 30px; gap: 10px; }
             #ui h1 { font-size: 14px; } #score-container { font-size: 18px; } .stats-row, .round-stats { font-size: 11px; }
             .bar-bg { width: 100px; height: 6px; } .bar-container { font-size: 10px; }
-            .info-modal-content { width: 90%; padding: 20px; } .shop-item { width: 130px; padding: 10px; } .shop-section-title { font-size: 14px; }
+            .info-modal-content { padding: 20px; } .shop-item { width: 130px; padding: 10px; } .shop-section-title { font-size: 14px; }
             #achievement-popup { width: 90%; border-radius: 10px; padding: 10px; }
+            .ach-tab-btn { padding: 6px 8px; font-size: 10px; }
+            .mission-report-card { padding: 20px; width: 92%; } #ds-title { font-size: 26px; } .stat-value { font-size: 24px; }
+            .btn-close-floating { top: 10px; right: 10px; width: 35px; height: 35px; font-size: 16px; }
+            #hud-abilities { bottom: 15px; gap: 10px; } .hud-btn { width: 45px; height: 45px; font-size: 20px; }
         }
     </style>
 </head>
 <body>
 
     <div id="portrait-warning"><h2>⚠️ ROTATE DEVICE</h2><p style="color: #88aaff;">Please rotate your phone to portrait mode to play Stellar Drifter.</p></div>
-    <div id="version-tag">v1.1.1 (Beta Release)</div>
+    <div id="version-tag">v1.3.1 (Stable Release)</div>
 
     <!-- MAIN MENU -->
     <div id="menu" class="overlay-menu">
         <h1 id="menu-title">STELLAR DRIFTER</h1>
         <div class="menu-stats" id="menu-stats-display">HIGH SCORE: 0 | CREDITS: $0.00</div>
-        <div class="menu-xp" id="menu-xp-display">LVL 1 | XP: 0 / 1000 | PRESTIGE: 0</div>
+        <div class="menu-xp" id="menu-xp-display">LVL 1 | XP: 0 | PRESTIGE: 0</div>
         <div>
             <button id="play-btn" class="btn">LAUNCH</button>
             <button id="open-shop-btn" class="btn">THE HANGAR</button>
@@ -143,87 +209,147 @@
 
     <!-- MODALS -->
     <div id="modal-achievements" class="info-modal">
-        <div class="info-modal-content" style="width: 100%;">
+        <button class="btn-close-floating close-modal-btn">X</button>
+        <div class="info-modal-content">
             <h2>ACHIEVEMENTS</h2>
+            
+            <div class="ach-tabs">
+                <button class="ach-tab-btn active" data-tab="upgrades">UPGRADES</button>
+                <button class="ach-tab-btn" data-tab="ships">SHIPS</button>
+                <button class="ach-tab-btn" data-tab="bgs">BACKGROUNDS</button>
+                <button class="ach-tab-btn" data-tab="progress">PROGRESS</button>
+            </div>
+
             <div id="achievements-list"></div>
-            <button class="btn close-modal-btn">CLOSE</button>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
         </div>
     </div>
 
     <div id="modal-patch" class="info-modal">
+        <button class="btn-close-floating close-modal-btn">X</button>
         <div class="info-modal-content">
-            <h2>PATCH NOTES v1.1.1</h2>
-            <ul style="text-align: left; line-height: 1.6; color: #88aaff; font-size: 14px; margin-bottom: 25px;">
-                <li><b>Bug Fix:</b> Eradicated the blank screen issue when closing the shop. The UI is perfectly stable!</li>
-                <li><b>Achievement Popups:</b> Added Xbox-style notification toasts that slide down when you unlock a milestone.</li>
-                <li><b>Dynamic Shop UI:</b> Inspect buttons glow Green if affordable, Red if not.</li>
-                <li><b>Smooth Buying:</b> Purchase prompts stay open so you can spam-buy upgrades easily!</li>
-                <li><b>Drone Subsystems:</b> Upgrade Drone Fire Rate and Swarm Size (up to 4 drones).</li>
-            </ul>
-            <button class="btn close-modal-btn">CLOSE</button>
+            <h2>PATCH NOTES</h2>
+            
+            <!-- SCROLLABLE PATCH NOTES HISTORY -->
+            <div class="patch-notes-container">
+                <h3>v1.3.1 (STABLE RELEASE)</h3>
+                <ul>
+                    <li><b>Launch Engine Restored:</b> Fixed a critical missing event binding that caused the main Launch sequence buttons to become completely unresponsive.</li>
+                    <li><b>Gravity Well Restored:</b> Repaired a missing script class preventing the Black Hole ability from deploying properly.</li>
+                    <li><b>Active Abilities HUD:</b> Added a sleek tactical HUD at the bottom of the screen! EMP is now triggered via HUD alongside new active abilities.</li>
+                    <li><b>New Ability - Gravity Well:</b> Deploy a massive black hole that sucks in enemies and hazards before detonating!</li>
+                    <li><b>New Ability - Phase Shift:</b> Turn ghostly and gain temporary 5-second invulnerability, passing harmlessly through asteroids!</li>
+                    <li><b>New Module - Nano-Bots:</b> Passively and continuously repairs your Hull Integrity during combat!</li>
+                    <li><b>New Module - Bounty Hunter:</b> Permanently multiply all physical credit drops by 25%!</li>
+                    <li><b>New Module - Overdrive:</b> Defeating Bosses now grants a stacking, permanent boost to your firing speed for the rest of the run!</li>
+                </ul>
+
+                <h3>v1.2.2 (Minor Update)</h3>
+                <ul>
+                    <li><b>Purchase Animation:</b> Added an expressive spring scaling pop and neon glowing pulse animation when clicking the shop's action button.</li>
+                    <li><b>Centered Terminal:</b> All inner layout bounds within the Mission Report boxes are perfectly aligned to the absolute center.</li>
+                    <li><b>Close Buttons Fixed:</b> Changed modal close buttons to absolute floating corners to prevent click-blocking layout bugs.</li>
+                </ul>
+                
+                <h3>v1.2.1 (Major Update)</h3>
+                <ul>
+                    <li><b>Comprehensive Achievements:</b> Over 140 new milestones implemented!</li>
+                    <li><b>Achievement Tabs:</b> Organized the massive achievement list into compact, filterable tabs (Upgrades, Ships, Progress).</li>
+                    <li><b>Level-Based Prestige:</b> Reach Level 100 to earn Prestige stars, granting permanent +1.0x Credit multipliers.</li>
+                </ul>
+            </div>
+            
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
         </div>
     </div>
 
     <div id="modal-coffee" class="info-modal">
+        <button class="btn-close-floating close-modal-btn">X</button>
         <div class="info-modal-content">
             <h2>BUY DEV A COFFEE ☕</h2>
             <p style="color: #88aaff; font-size: 14px; line-height: 1.5;">If you enjoy Stellar Drifter and want to support the development of future features, consider leaving a tip!</p>
             <div class="qr-placeholder">
                 <img src="https://i.postimg.cc/dtKsPgZd/IMG-20260714-210043.jpg" style="width:100%; height:100%; object-fit: contain; border-radius: 5px;">
             </div>
-            <button class="btn close-modal-btn">CLOSE</button>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
         </div>
     </div>
 
     <div id="modal-credits" class="info-modal">
+        <button class="btn-close-floating close-modal-btn">X</button>
         <div class="info-modal-content">
             <h2>CREDITS</h2>
             <div style="font-size: 16px; color: #00ffff; margin-bottom: 5px; font-weight: bold;">CREATOR & LEAD DEV</div>
-            <div style="font-size: 24px; font-weight: 900; color: #ffaa00; margin-bottom: 25px; letter-spacing: 2px; text-shadow: 0 0 10px #ffaa00;">ItzPhantomGG</div>
+            <div style="font-size: 24px; font-weight: 900; color: #ffaa00; margin-bottom: 25px; letter-spacing: 2px; text-shadow: 0 0 10px #ffaa00;">Itzphantomgg</div>
             
             <div style="font-size: 14px; color: #88aaff; margin-bottom: 5px;">AI ASSISTANT & CO-CODER</div>
             <div style="font-size: 18px; color: #33ff88; margin-bottom: 30px;">Gemini</div>
             
-            <button class="btn close-modal-btn">CLOSE</button>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
         </div>
     </div>
 
     <div id="modal-wipe" class="info-modal">
+        <button class="btn-close-floating close-modal-btn">X</button>
         <div class="info-modal-content" style="border-color: #ff4444; box-shadow: 0 0 30px rgba(255,68,68,0.2);">
             <h2 style="color: #ff4444; text-shadow: 0 0 10px #ff4444;">SYSTEM PURGE</h2>
             <p style="color: #ff88aa; font-size: 14px; line-height: 1.5;">WARNING: This will permanently delete your High Score, Credits, Prestige levels, and all unlocked items. Are you absolutely sure?</p>
-            <button class="btn" id="confirm-wipe-btn" style="border-color: #ff4444; color: #ff4444;">INITIATE PURGE</button>
-            <button class="btn close-modal-btn">CANCEL</button>
+            <button class="btn" id="confirm-wipe-btn" style="border-color: #ff4444; color: #ff4444; width: 100%;">INITIATE PURGE</button>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
         </div>
     </div>
 
     <div id="modal-lore" class="info-modal" style="z-index: 60;">
+        <button class="btn-close-floating close-modal-btn">X</button>
         <div class="info-modal-content">
             <h2 id="lore-title" style="color: #ffaa00; border: none; margin-bottom: 5px;">TITLE</h2>
             <div class="shop-icon-preview" id="lore-icon" style="justify-content: center; font-size: 50px; margin: 15px 0;">🚀</div>
             <p id="lore-desc" style="color: #88aaff; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">Lore description goes here.</p>
             <div id="lore-cost" style="color: #33ff88; font-size: 22px; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 5px currentColor;">COST: $0</div>
             <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                <button id="lore-buy-btn" class="btn" style="padding: 10px 20px; font-size: 14px;">PURCHASE</button>
-                <button id="lore-cancel-btn" class="btn close-modal-btn" style="padding: 10px 20px; font-size: 14px; border-color: #ff4444; color: #ff4444;">CLOSE</button>
+                <button id="lore-buy-btn" class="btn" style="padding: 10px 20px; font-size: 14px; width: 100%;">PURCHASE</button>
             </div>
             <div class="footer-text-modal">Made with ❤️ By Dev</div>
         </div>
     </div>
 
-    <!-- DEATH SCREEN -->
+    <!-- UPGRADED CENTERED DEATH SCREEN (MISSION REPORT CARD) -->
     <div id="death-screen" class="overlay-menu" style="display: none;">
         <button id="ds-menu-btn" class="btn" style="position: absolute; top: 15px; left: 15px; padding: 10px 15px; font-size: 24px; margin: 0;">☰</button>
-        <h1 id="menu-title" style="color: #ff3333; text-shadow: 0 0 20px rgba(255,0,0,0.8);">SHIP DESTROYED</h1>
-        <div id="death-cause">CAUSE OF DEATH</div>
-        <div class="menu-stats" style="color: #00ffff; font-size: 24px; margin-bottom: 5px;">ROUND SCORE: <span id="ds-score">0</span></div>
-        <div class="menu-stats" style="color: #33ff88; font-size: 20px; margin-bottom: 30px;">EARNED: $<span id="ds-credits">0.00</span></div>
-        <button id="play-again-btn" class="btn">PLAY AGAIN</button>
+        
+        <div class="mission-report-card">
+            <div class="report-header">
+                <h1 id="ds-title">SHIP DESTROYED</h1>
+                <div id="death-cause-pill"><span style="color: #888;">CAUSE:</span> <span id="death-cause">ENEMY FIRE</span></div>
+            </div>
+
+            <div class="report-divider"></div>
+
+            <div class="stats-grid">
+                <div class="stat-box score-box">
+                    <div class="stat-label">FINAL COMBAT SCORE</div>
+                    <div class="stat-value" id="ds-final-score">0</div>
+                </div>
+
+                <div class="stat-box credits-box">
+                    <div class="stat-label">TOTAL CREDITS EARNED</div>
+                    <div class="stat-value" id="ds-credits">$0.00</div>
+                    
+                    <div id="ds-credits-breakdown" class="breakdown-tag" style="display: none;">
+                        <span>BASE: $<b id="ds-base-credits">0.00</b></span>
+                        <span class="mult-badge">x<b id="ds-prestige-mult">1.0</b> PRESTIGE BONUS</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-divider"></div>
+
+            <div class="action-buttons">
+                <button id="play-again-btn" class="btn main-action-btn">PLAY AGAIN</button>
+                <button id="ds-hangar-btn" class="btn sub-action-btn">THE HANGAR</button>
+            </div>
+        </div>
+
         <div class="footer-text">Made with ❤️ By Dev</div>
     </div>
 
@@ -257,11 +383,17 @@
             <div class="shop-item"><h3 style="color: #00ffaa;">Drone Swarm</h3><div class="shop-icon-preview">🛸</div><div class="progress-dots" id="dronecount-dots"></div><button class="btn buy-btn" id="btn-dronecount" data-type="multitier" data-val="dronecount">INSPECT</button></div>
         </div>
 
-        <div class="shop-section-title">SPECIAL TECH</div>
+        <div class="shop-section-title">SPECIAL TECH (MODULES & ACTIVES)</div>
         <div class="shop-items">
             <div class="shop-item"><h3 style="color: #00ffaa;">Plasma Drone Core</h3><div class="shop-icon-preview">🛸</div><p style="font-size: 10px; margin: 0 0 10px 0;">Auto-fires at foes.</p><button class="btn buy-btn" data-type="upgrade" data-val="drone" data-cost="3000">INSPECT</button></div>
             <div class="shop-item"><h3 style="color: #33ff88;">Deflector Shield</h3><div class="shop-icon-preview">🛡️</div><p style="font-size: 10px; margin: 0 0 10px 0;">Absorbs 1 fatal hit.</p><button class="btn buy-btn" data-type="upgrade" data-val="shield" data-cost="1000">INSPECT</button></div>
-            <div class="shop-item"><h3 style="color: #ff00ff;">EMP Nuke</h3><div class="shop-icon-preview">☢️</div><p style="font-size: 10px; margin: 0 0 10px 0;">Double-tap to clear.</p><button class="btn buy-btn" data-type="upgrade" data-val="emp" data-cost="2000">INSPECT</button></div>
+            <div class="shop-item"><h3 style="color: #ff00ff;">EMP Nuke</h3><div class="shop-icon-preview">☢️</div><p style="font-size: 10px; margin: 0 0 10px 0;">Tap HUD to clear.</p><button class="btn buy-btn" data-type="upgrade" data-val="emp" data-cost="2000">INSPECT</button></div>
+            
+            <div class="shop-item"><h3 style="color: #88aaff;">Gravity Well</h3><div class="shop-icon-preview">🌀</div><p style="font-size: 10px; margin: 0 0 10px 0;">Black hole AOE.</p><button class="btn buy-btn" data-type="upgrade" data-val="gravity_well" data-cost="4000">INSPECT</button></div>
+            <div class="shop-item"><h3 style="color: #00ffff;">Phase Shift</h3><div class="shop-icon-preview">👻</div><p style="font-size: 10px; margin: 0 0 10px 0;">Temp invincibility.</p><button class="btn buy-btn" data-type="upgrade" data-val="phase_shift" data-cost="5000">INSPECT</button></div>
+            <div class="shop-item"><h3 style="color: #33ff88;">Nano-Bots</h3><div class="shop-icon-preview">🦠</div><p style="font-size: 10px; margin: 0 0 10px 0;">Passive HP regen.</p><button class="btn buy-btn" data-type="upgrade" data-val="nano_bots" data-cost="2500">INSPECT</button></div>
+            <div class="shop-item"><h3 style="color: #ffaa00;">Overdrive Cap.</h3><div class="shop-icon-preview">⚙️</div><p style="font-size: 10px; margin: 0 0 10px 0;">Boss kill buffs.</p><button class="btn buy-btn" data-type="upgrade" data-val="overdrive" data-cost="3500">INSPECT</button></div>
+            <div class="shop-item"><h3 style="color: #ff0044;">Bounty Hunter</h3><div class="shop-icon-preview">🎯</div><p style="font-size: 10px; margin: 0 0 10px 0;">+25% Credit drops.</p><button class="btn buy-btn" data-type="upgrade" data-val="bounty_hunter" data-cost="3000">INSPECT</button></div>
         </div>
 
         <div class="shop-section-title">SHIP DESIGNS (HULLS)</div>
@@ -291,7 +423,7 @@
         <div class="ui-left">
             <h1 style="color: #88aaff; text-shadow: 0 0 5px #88aaff;">STELLAR DRIFTER</h1>
             <div class="stats-row">HIGH SCORE: <span id="ui-highscore">0</span></div>
-            <div class="round-stats">ROUND XP: <span id="ui-round-xp">0</span> | EARNED: $<span id="ui-round-credits">0.00</span></div>
+            <div class="round-stats">SCORE: <span id="ui-round-xp">0</span> | EARNED: $<span id="ui-round-credits">0.00</span></div>
             <div class="bar-container" id="armor-container">
                 <span>ARMOR:</span><div class="bar-bg" id="armor-bar-bg"><div id="armor-bar"></div></div>
             </div>
@@ -305,10 +437,22 @@
             <div id="phase-countdown" style="margin-top: 10px; font-size: 14px; font-weight: bold; color: #ffaa00;"></div>
             <div id="shield-indicator">SHIELD ACTIVE</div>
             <div id="powerup-indicator"></div>
-            <div id="emp-indicator"></div>
         </div>
         <div class="ui-right">
             <button id="in-game-menu-btn">☰</button>
+        </div>
+    </div>
+    
+    <!-- HUD ABILITIES CONTAINER v1.3.1 -->
+    <div id="hud-abilities">
+        <div class="hud-btn" id="btn-emp" style="color: #ff00ff; display: none;">
+            <div class="cooldown-overlay" id="cd-emp"></div>☢️
+        </div>
+        <div class="hud-btn" id="btn-grav" style="color: #88aaff; display: none;">
+            <div class="cooldown-overlay" id="cd-grav"></div>🌀
+        </div>
+        <div class="hud-btn" id="btn-phase" style="color: #00ffff; display: none;">
+            <div class="cooldown-overlay" id="cd-phase"></div>👻
         </div>
     </div>
 
@@ -325,11 +469,18 @@
     <canvas id="canvas"></canvas>
 
     <script>
+        // HIDDEN DEV CHEAT CODE (No visible UI mention per request)
+        document.getElementById('menu-title').addEventListener('click', () => {
+            savedCredits += 500000;
+            localStorage.setItem('stellar_credits', savedCredits);
+            updateDisplays();
+            console.log("Dev Mode hack applied invisibly.");
+        });
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         let width, height;
 
-        // VIRTUAL RESOLUTION & ZOOM SCALING FOR MOBILE
         function resizeCanvas() {
             let winW = window.innerWidth; let winH = window.innerHeight;
             if (winW < 768) { width = canvas.width = 800; height = canvas.height = 800 * (winH / winW); } 
@@ -339,22 +490,33 @@
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
         function getScale() { return canvas.width / window.innerWidth; }
 
-        // --- AUDIO SYSTEM ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
-            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-            
-            if (type === 'shoot') { osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1); gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } 
-            else if (type === 'laser') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2); osc.start(); osc.stop(audioCtx.currentTime + 0.2); } 
-            else if (type === 'explosion') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.3); gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3); osc.start(); osc.stop(audioCtx.currentTime + 0.3); } 
-            else if (type === 'powerup') { osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3); osc.start(); osc.stop(audioCtx.currentTime + 0.3); } 
-            else if (type === 'emp') { osc.type = 'square'; osc.frequency.setValueAtTime(50, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 1.0); gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.0); osc.start(); osc.stop(audioCtx.currentTime + 1.0); }
-            else if (type === 'achievement') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
+        let audioCtx = null;
+        function initAudio() {
+            try {
+                if (!audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) audioCtx = new AudioContext();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(()=>{}); }
+            } catch (e) { console.warn("Audio Context disabled"); }
         }
 
-        // --- BULLETPROOF MODAL MANAGEMENT ---
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+                const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+                osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+                
+                if (type === 'shoot') { osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1); gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } 
+                else if (type === 'laser') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2); osc.start(); osc.stop(audioCtx.currentTime + 0.2); } 
+                else if (type === 'explosion') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.3); gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3); osc.start(); osc.stop(audioCtx.currentTime + 0.3); } 
+                else if (type === 'powerup') { osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3); osc.start(); osc.stop(audioCtx.currentTime + 0.3); } 
+                else if (type === 'emp') { osc.type = 'square'; osc.frequency.setValueAtTime(50, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 1.0); gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.0); osc.start(); osc.stop(audioCtx.currentTime + 1.0); }
+                else if (type === 'achievement') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
+            } catch(e) {}
+        }
+
         document.querySelectorAll('.close-modal-btn').forEach(btn => {
             btn.addEventListener('click', (e) => { 
                 const modal = e.target.closest('.info-modal');
@@ -367,7 +529,6 @@
         document.getElementById('btn-open-credits').addEventListener('click', () => { document.getElementById('modal-credits').style.display = 'flex'; });
         document.getElementById('btn-open-wipe').addEventListener('click', () => { document.getElementById('modal-wipe').style.display = 'flex'; });
 
-        // LORE DICTIONARY
         const LORE = {
             'dmg': { title: 'Weapon Damage', icon: '💥', desc: 'Boosts your base cannon damage, shredding enemy armor faster with every shot.' },
             'fire': { title: 'Fire Rate', icon: '⚡', desc: 'Overclocks your blasters cooling systems to fire significantly faster.' },
@@ -383,14 +544,19 @@
             'dronecount': { title: 'Drone Swarm', icon: '🛸', desc: 'Deploys an additional companion drone to flank your ship (Max 4 Drones).' },
             'drone': { title: 'Plasma Drone Core', icon: '🛸', desc: 'Installs the core AI subsystem, deploying your first companion drone.' },
             'shield': { title: 'Deflector Shield', icon: '🛡️', desc: 'Generates a one-time energy barrier that completely absorbs a fatal meteor hit.' },
-            'emp': { title: 'EMP Nuke', icon: '☢️', desc: 'Double-tap anywhere to unleash a shockwave that instantly clears all minor hazards.' },
+            'emp': { title: 'EMP Nuke', icon: '☢️', desc: 'Tap the HUD ability to unleash a shockwave that instantly clears all minor hazards.' },
+            'gravity_well': { title: 'Gravity Well Generator', icon: '🌀', desc: 'Deploy a temporary singularity that sucks in enemies and debris before detonating.' },
+            'nano_bots': { title: 'Nano-Bot Repair Kit', icon: '🦠', desc: 'Passive microscopic bots that continually reconstruct your hull integrity mid-combat.' },
+            'overdrive': { title: 'Overdrive Capacitor', icon: '⚙️', desc: 'Absorbs residual energy from destroyed Phase Bosses, permanently boosting fire rate for the run.' },
+            'phase_shift': { title: 'Phase Shift Engine', icon: '👻', desc: 'Temporarily shift out of standard reality, passing harmlessly through all hazards.' },
+            'bounty_hunter': { title: 'Bounty Hunter Module', icon: '🎯', desc: 'Hacks local sector feeds, permanently boosting all physical credit drops by 25%.' },
             'basic': { title: 'Basic Hull', icon: '🚀', desc: 'The standard Federation scout ship. Reliable, balanced, and nostalgic.' },
             'striker': { title: 'Striker', icon: '🛩️', desc: 'A sleek, aerodynamic fighter built for aggressive maneuvers and speed.' },
             'juggernaut': { title: 'Juggernaut', icon: '🛸', desc: 'A heavy, reinforced dreadnought chassis meant to intimidate.' },
             'valkyrie': { title: 'Valkyrie', icon: '🦅', desc: 'A deadly interceptor with forward-swept combat wings.' },
             'titan': { title: 'Titan', icon: '🪨', desc: 'A massive, blocky armored tank designed for pure brute force.' },
             'wraith': { title: 'Wraith', icon: '🦇', desc: 'An experimental stealth ship with sharp alien wing geometry.' },
-            'phantom': { title: 'Phantom', icon: '🔺', desc: 'The ultimate stealth apex predator. Dedicated to the legendary ItzPhantomGG.' },
+            'phantom': { title: 'Phantom', icon: '🔺', desc: 'The ultimate stealth apex predator. Dedicated to the legendary Itzphantomgg.' },
             'void': { title: 'Void-Walker', icon: '🌌', desc: 'A legendary hull forged from dark matter and condensed plasma.' },
             'default': { title: 'Deep Space', icon: '🌌', desc: 'The cold, vast, and quiet emptiness of standard space.' },
             'matrix': { title: 'Digital Rain', icon: '🟩', desc: 'Lightweight tactical simulation displaying raw environmental code.' },
@@ -399,20 +565,35 @@
             'core': { title: 'Galactic Core', icon: '🔥', desc: 'The supermassive, glowing center of the galaxy.' },
         };
 
-        // --- SAVE DATA & PROGRESSION ---
+        const safeParseArray = (key, fallback) => { 
+            try { 
+                let v = localStorage.getItem(key); 
+                if (v === null || v === 'undefined') return fallback;
+                let parsed = JSON.parse(v);
+                return Array.isArray(parsed) ? parsed : fallback;
+            } catch(e) { return fallback; } 
+        };
+
         let totalXP = parseInt(localStorage.getItem('stellar_xp')) || 0;
+        if (isNaN(totalXP)) totalXP = 0;
+        
         let prestigeCount = parseInt(localStorage.getItem('stellar_prestige')) || 0;
+        if (isNaN(prestigeCount)) prestigeCount = 0;
+
         let savedHighScore = parseInt(localStorage.getItem('stellar_highscore')) || 0;
+        if (isNaN(savedHighScore)) savedHighScore = 0;
+
         let savedCredits = parseFloat(localStorage.getItem('stellar_credits')) || 0;
+        if (savedCredits < 0 || isNaN(savedCredits)) { savedCredits = 0; localStorage.setItem('stellar_credits', 0); }
         
         let equippedShip = localStorage.getItem('stellar_ship_design') || 'basic';
         let equippedBG = localStorage.getItem('stellar_bg') || 'default';
         
-        let unlockedShips = JSON.parse(localStorage.getItem('stellar_unlocks_ships')) || ['basic'];
-        let unlockedBGs = JSON.parse(localStorage.getItem('stellar_bg_unlocks')) || ['default'];
-        let unlockedUpgrades = JSON.parse(localStorage.getItem('stellar_upgrades')) || [];
+        let unlockedShips = safeParseArray('stellar_unlocks_ships', ['basic']);
+        let unlockedBGs = safeParseArray('stellar_bg_unlocks', ['default']);
+        let unlockedUpgrades = safeParseArray('stellar_upgrades', []);
         
-        const tierCosts = [250, 500, 1000, 2000, 4000, 8000, 15000, 25000]; // 8 levels max
+        const tierCosts = [250, 500, 1000, 2000, 4000, 8000, 15000, 25000];
         let weaponDamageLvl = parseInt(localStorage.getItem('stellar_dmg_lvl')) || 0;
         let fireRateLvl = parseInt(localStorage.getItem('stellar_fire_lvl')) || 0;
         let hpLvl = parseInt(localStorage.getItem('stellar_hp_lvl')) || 0;
@@ -428,21 +609,41 @@
         let droneFireLvl = parseInt(localStorage.getItem('stellar_dronefire_lvl')) || 0;
         let droneCountLvl = parseInt(localStorage.getItem('stellar_dronecount_lvl')) || 0;
 
-        // --- ACHIEVEMENTS SYSTEM & POPUPS ---
-        let achievements = JSON.parse(localStorage.getItem('stellar_achievements')) || {
-            mechanic: false, war_machine: false, collector: false, fleet_cmdr: false, drone_master: false, prestige: false, boss_slayer: false
-        };
+        let achievements = {};
+        try {
+            let a = localStorage.getItem('stellar_achievements');
+            if (a) achievements = JSON.parse(a);
+            if (typeof achievements !== 'object' || achievements === null) achievements = {};
+        } catch(e) { achievements = {}; }
 
-        const achList = [
-            { id: 'mechanic', name: 'Mechanic', desc: 'Purchase your first shop upgrade.', icon: '🔧' },
-            { id: 'war_machine', name: 'War Machine', desc: 'Max out Weapon Damage to Level 8.', icon: '💥' },
-            { id: 'collector', name: 'Collector', desc: 'Unlock at least 4 different ships.', icon: '🚀' },
-            { id: 'fleet_cmdr', name: 'Fleet Commander', desc: 'Unlock every single ship hull in the game.', icon: '👑' },
-            { id: 'drone_master', name: 'Drone Master', desc: 'Unlock the Drone Swarm upgrade to spawn 4 drones.', icon: '🛸' },
-            { id: 'boss_slayer', name: 'Boss Slayer', desc: 'Defeat your first Phase Boss anomaly.', icon: '💀' },
-            { id: 'prestige', name: 'Legendary Drifter', desc: 'Prestige your account for the first time.', icon: '🌟' }
-        ];
+        const achList = [];
+        let silentAchievementUnlock = true; 
+        
+        const sysMap = { 'dmg': 'Weapon Damage', 'fire': 'Fire Rate', 'hp': 'Hull Integrity', 'armor': 'Armor Capacity', 'magnet': 'Magnet Range', 'luck': 'Loot Luck', 'forge': 'Credit Forge', 'spread': 'Spread Power', 'rapid': 'Rapid Power', 'laser': 'Laser Power', 'dronefire': 'Drone Fire Rate', 'dronecount': 'Drone Swarm' };
+        for(let key in sysMap) {
+            let max = (key === 'dronecount') ? 3 : 8;
+            for(let i=1; i<=max; i++) { achList.push({ id: `ach_${key}_${i}`, tab: 'upgrades', name: `${sysMap[key]} Mk.${i}`, desc: `Upgrade ${sysMap[key]} to Level ${i}.`, icon: '🔧' }); }
+        }
 
+        achList.push({ id: `ach_tech_drone`, tab: 'upgrades', name: `Plasma Drone Core`, desc: `Install the core AI subsystem.`, icon: '🛸' });
+        achList.push({ id: `ach_tech_shield`, tab: 'upgrades', name: `Deflector Shield`, desc: `Equip the deflector shield.`, icon: '🛡️' });
+        achList.push({ id: `ach_tech_emp`, tab: 'upgrades', name: `EMP Nuke`, desc: `Install the EMP nuke system.`, icon: '☢️' });
+        achList.push({ id: `ach_tech_gravity_well`, tab: 'upgrades', name: `Gravity Well`, desc: `Purchase the Gravity Well Generator.`, icon: '🌀' });
+        achList.push({ id: `ach_tech_nano_bots`, tab: 'upgrades', name: `Nano-Bots`, desc: `Purchase the Nano-Bot Repair Kit.`, icon: '🦠' });
+        achList.push({ id: `ach_tech_overdrive`, tab: 'upgrades', name: `Overdrive Capacitor`, desc: `Purchase the Overdrive Capacitor.`, icon: '⚙️' });
+        achList.push({ id: `ach_tech_phase_shift`, tab: 'upgrades', name: `Phase Shift`, desc: `Purchase the Phase Shift Engine.`, icon: '👻' });
+        achList.push({ id: `ach_tech_bounty_hunter`, tab: 'upgrades', name: `Bounty Hunter`, desc: `Purchase the Bounty Hunter Module.`, icon: '🎯' });
+
+        const hullsMap = { 'striker': 'Striker', 'juggernaut': 'Juggernaut', 'valkyrie': 'Valkyrie', 'titan': 'Titan', 'wraith': 'Wraith', 'phantom': 'Phantom', 'void': 'Void-Walker' };
+        for(let key in hullsMap) achList.push({ id: `ach_hull_${key}`, tab: 'ships', name: `Unlock ${hullsMap[key]}`, desc: `Purchase the ${hullsMap[key]} hull.`, icon: '🚀' });
+        
+        const bgsMap = { 'matrix': 'Digital Rain', 'crimson': 'Crimson Nebula', 'neon': 'Synthwave', 'core': 'Galactic Core' };
+        for(let key in bgsMap) achList.push({ id: `ach_bg_${key}`, tab: 'bgs', name: `Unlock ${bgsMap[key]}`, desc: `Purchase the ${bgsMap[key]} background.`, icon: '🌌' });
+        
+        for(let i=1; i<=10; i++) achList.push({ id: `ach_phase_${i}`, tab: 'progress', name: `Sector ${i} Cleared`, desc: `Defeat the Phase ${i} Boss.`, icon: '💀' });
+        for(let i=1; i<=30; i++) achList.push({ id: `ach_prestige_${i}`, tab: 'progress', name: `Prestige Level ${i}`, desc: `Prestige your ship ${i} times.`, icon: '🌟' });
+
+        let currentAchTab = 'upgrades';
         let popupQueue = [];
         let isPopupShowing = false;
 
@@ -466,37 +667,51 @@
             
             setTimeout(() => {
                 popup.classList.remove('show');
-                setTimeout(processPopupQueue, 600); // wait for slide up animation before next
+                setTimeout(processPopupQueue, 600);
             }, 3000);
         }
 
         function checkAchievements() {
-            let changed = false;
-            const checkAndUnlock = (id, condition) => {
-                if (!achievements[id] && condition) {
-                    achievements[id] = true; changed = true;
-                    let achDetails = achList.find(a => a.id === id);
-                    if (achDetails) showAchievementPopup(achDetails);
-                }
-            };
+            try {
+                let changed = false;
+                const checkAndUnlock = (id, condition) => {
+                    if (!achievements[id] && condition) {
+                        achievements[id] = true; changed = true;
+                        let achDetails = achList.find(a => a.id === id);
+                        if (achDetails && !silentAchievementUnlock) showAchievementPopup(achDetails);
+                    }
+                };
 
-            checkAndUnlock('mechanic', (weaponDamageLvl>0 || fireRateLvl>0 || hpLvl>0 || armorLvl>0));
-            checkAndUnlock('war_machine', weaponDamageLvl >= 8);
-            checkAndUnlock('collector', unlockedShips.length >= 4);
-            checkAndUnlock('fleet_cmdr', unlockedShips.length >= 8);
-            checkAndUnlock('drone_master', droneCountLvl >= 3);
-            checkAndUnlock('prestige', prestigeCount > 0);
-            
-            if (changed) localStorage.setItem('stellar_achievements', JSON.stringify(achievements));
+                const upgradeMap = { 'dmg': weaponDamageLvl, 'fire': fireRateLvl, 'hp': hpLvl, 'armor': armorLvl, 'magnet': magnetLvl, 'luck': luckLvl, 'forge': forgeLvl, 'spread': spreadLvl, 'rapid': rapidLvl, 'laser': laserLvl, 'dronefire': droneFireLvl, 'dronecount': droneCountLvl };
+                for(let key in upgradeMap) { for(let i=1; i<=upgradeMap[key]; i++) checkAndUnlock(`ach_${key}_${i}`, true); }
+
+                unlockedShips.forEach(h => { if(h !== 'basic') checkAndUnlock(`ach_hull_${h}`, true); });
+                unlockedBGs.forEach(b => { if(b !== 'default') checkAndUnlock(`ach_bg_${b}`, true); });
+                unlockedUpgrades.forEach(u => { checkAndUnlock(`ach_tech_${u}`, true); });
+
+                let maxPhase = parseInt(localStorage.getItem('stellar_max_phase')) || 0;
+                for(let i=1; i<=maxPhase; i++) checkAndUnlock(`ach_phase_${i}`, true);
+                for(let i=1; i<=prestigeCount; i++) checkAndUnlock(`ach_prestige_${i}`, true);
+                
+                if (changed) localStorage.setItem('stellar_achievements', JSON.stringify(achievements));
+            } catch(e) { console.warn("Achievement check error suppressed."); }
         }
 
         function renderAchievements() {
             checkAchievements();
             const container = document.getElementById('achievements-list');
-            container.innerHTML = '';
-            achList.forEach(ach => {
+            let filteredList = achList.filter(a => a.tab === currentAchTab);
+
+            let sortedList = filteredList.sort((a, b) => {
+                let aUnl = achievements[a.id] ? 1 : 0;
+                let bUnl = achievements[b.id] ? 1 : 0;
+                return bUnl - aUnl;
+            });
+
+            let htmlString = '';
+            sortedList.forEach(ach => {
                 let isUnlocked = achievements[ach.id];
-                container.innerHTML += `
+                htmlString += `
                     <div class="ach-item ${isUnlocked ? 'unlocked' : ''}">
                         <div class="ach-icon">${ach.icon}</div>
                         <div class="ach-text">
@@ -505,7 +720,19 @@
                         </div>
                     </div>`;
             });
+            container.innerHTML = htmlString;
+            
+            document.querySelectorAll('.ach-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-tab') === currentAchTab);
+            });
         }
+
+        document.querySelectorAll('.ach-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentAchTab = e.target.getAttribute('data-tab');
+                renderAchievements();
+            });
+        });
 
         let gameActive = false;
         let score = 0, roundCredits = 0;
@@ -521,17 +748,21 @@
         let phaseFramesRemaining = 3600; 
         
         let empCooldown = 0;
-        let lastTapTime = 0;
+        let gravCooldown = 0;
+        let phaseCooldown = 0;
+        
+        let phaseShiftActive = false;
+        let overdriveStacks = 0;
+
         let droneAngle = 0;
         let droneLastShot = 0;
 
         let maxArmor = 100, playerArmor = 100, maxHP = 100, playerHP = 100, shieldActive = false, droneActive = false;
 
-        const stars = [], trailParticles = [], particles = [], asteroids = [], meteors = [], diamonds = [], bullets = [], droppedPowerups = [], enemies = [], bosses = [], floatingTexts = [];
+        const stars = [], trailParticles = [], particles = [], asteroids = [], meteors = [], diamonds = [], bullets = [], droppedPowerups = [], enemies = [], bosses = [], floatingTexts = [], gravityWells = [];
         let mouse = { x: width / 2, y: height / 2, clicked: false, angle: -Math.PI / 2 };
         let lastShotTime = 0;
 
-        // UI Elements
         const scoreEl = document.getElementById('score');
         const multiplierEl = document.getElementById('multiplier');
         const uiHighscore = document.getElementById('ui-highscore');
@@ -540,7 +771,6 @@
         const phaseCountdownEl = document.getElementById('phase-countdown');
 
         function calcLevel() { return Math.floor(Math.sqrt(totalXP / 1000)) + 1; }
-        function calcNextXp() { let lvl = calcLevel(); return lvl * lvl * 1000; }
 
         function updateInputPos(clientX, clientY) {
             let scale = getScale(); let scaledX = clientX * scale; let scaledY = clientY * scale;
@@ -549,15 +779,9 @@
             mouse.x = scaledX; mouse.y = scaledY;
         }
 
-        function handleTap() {
-            let now = Date.now();
-            if (now - lastTapTime < 300 && unlockedUpgrades.includes('emp') && now - empCooldown > 30000 && gameActive) {
-                triggerEMP(); empCooldown = now;
-            }
-            lastTapTime = now; mouse.clicked = true;
-        }
-
         function triggerEMP() {
+            if (Date.now() - empCooldown < 30000 || !gameActive) return;
+            empCooldown = Date.now();
             createExplosion(width/2, height/2, 150, 280, 60, 100, 70, 30); triggerShake(40); playSound('emp');
             meteors.forEach(m => m.spawn(Math.random() * 2000 + 1000));
             asteroids.forEach(a => { score += 30; createExplosion(a.x, a.y, 10, 20, 30, 80, 50, 4); a.spawn(Math.random() * 800); });
@@ -565,11 +789,34 @@
             floatingTexts.push(new FloatingText(width/2, height/2 - 50, "EMP DEPLOYED", "#ff00ff"));
         }
 
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); updateInputPos(e.touches[0].clientX, e.touches[0].clientY); handleTap(); }, { passive: false });
+        function triggerGrav() {
+            if (Date.now() - gravCooldown < 45000 || !gameActive) return;
+            gravCooldown = Date.now();
+            playSound('powerup');
+            gravityWells.push(new GravityWell(mouse.x, mouse.y));
+            floatingTexts.push(new FloatingText(mouse.x, mouse.y - 40, "GRAVITY WELL", "#88aaff"));
+        }
+
+        function triggerPhase() {
+            if (Date.now() - phaseCooldown < 40000 || !gameActive) return;
+            phaseCooldown = Date.now();
+            phaseShiftActive = true;
+            playSound('powerup');
+            floatingTexts.push(new FloatingText(mouse.x, mouse.y - 40, "PHASE SHIFT", "#00ffff"));
+            setTimeout(() => { phaseShiftActive = false; }, 5000); 
+        }
+
+        ['touchstart', 'mousedown'].forEach(evt => {
+            document.getElementById('btn-emp').addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); triggerEMP(); });
+            document.getElementById('btn-grav').addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); triggerGrav(); });
+            document.getElementById('btn-phase').addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); triggerPhase(); });
+        });
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); updateInputPos(e.touches[0].clientX, e.touches[0].clientY); mouse.clicked = true; }, { passive: false });
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); updateInputPos(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
         canvas.addEventListener('touchend', (e) => { e.preventDefault(); mouse.clicked = false; }, { passive: false });
         window.addEventListener('mousemove', (e) => updateInputPos(e.clientX, e.clientY));
-        window.addEventListener('mousedown', handleTap);
+        window.addEventListener('mousedown', (e) => { if(e.target === canvas) mouse.clicked = true; });
         window.addEventListener('mouseup', () => mouse.clicked = false);
 
         function triggerShake(amount) { screenShake = Math.max(screenShake, amount); }
@@ -589,13 +836,18 @@
             document.getElementById('menu-stats-display').innerText = `HIGH SCORE: ${savedHighScore} | CREDITS: $${savedCredits.toFixed(2)}`;
             document.getElementById('shop-stats-display').innerText = `CREDITS: $${savedCredits.toFixed(2)}`;
             let lvl = calcLevel();
-            document.getElementById('menu-xp-display').innerText = `LVL ${lvl} | XP: ${totalXP} / ${calcNextXp()} | PRESTIGE: ${prestigeCount}/30`;
+            document.getElementById('menu-xp-display').innerText = `LVL ${lvl} | XP: ${totalXP} | PRESTIGE: ${prestigeCount}/30`;
+            
             const pBtn = document.getElementById('prestige-btn');
-            if (lvl >= 15 && prestigeCount < 30) pBtn.style.display = 'inline-block'; else pBtn.style.display = 'none';
+            if (lvl >= 100 && prestigeCount < 30) {
+                pBtn.style.display = 'inline-block';
+                pBtn.innerText = `PRESTIGE (+1.0x MULTIPLIER) - REQ: LVL 100`;
+            } else { 
+                pBtn.style.display = 'none'; 
+            }
 
-            uiHighscore.innerText = savedHighScore;
+            if(uiHighscore) uiHighscore.innerText = savedHighScore;
 
-            // DYNAMIC BUTTON STYLING LOGIC
             document.querySelectorAll('.buy-btn:not([data-type="multitier"])').forEach(btn => {
                 const type = btn.getAttribute('data-type'); const val = btn.getAttribute('data-val'); const cost = parseInt(btn.getAttribute('data-cost'));
                 let isUnlocked = (type === 'ship' && unlockedShips.includes(val)) || (type === 'bg' && unlockedBGs.includes(val)) || (type === 'upgrade' && unlockedUpgrades.includes(val));
@@ -632,12 +884,11 @@
             updateTierBtn('btn-laser', laserLvl, 8, 'laser-dots');
             
             updateTierBtn('btn-dronefire', droneFireLvl, 8, 'dronefire-dots');
-            updateTierBtn('btn-dronecount', droneCountLvl, 3, 'dronecount-dots'); // Max 3 upgrades = 4 drones total
+            updateTierBtn('btn-dronecount', droneCountLvl, 3, 'dronecount-dots');
             
             checkAchievements();
         }
 
-        // --- LORE MODAL / PURCHASE LOGIC ---
         let currentShopItem = null;
         
         function openLoreModal(type, val, costAttr) {
@@ -696,33 +947,41 @@
             });
         });
 
-        document.getElementById('lore-buy-btn').addEventListener('click', () => {
+        document.getElementById('lore-buy-btn').addEventListener('click', (e) => {
             if (!currentShopItem) return;
             const { type, val, costAttr, isOwned } = currentShopItem;
             let costToDeduct = 0;
 
+            e.target.classList.remove('btn-buy-flash'); void e.target.offsetWidth; e.target.classList.add('btn-buy-flash');
+
             if (type === 'multitier') {
                 const upgradeMap = {
-                    'dmg': {lvl: weaponDamageLvl, key: 'stellar_dmg_lvl'}, 'fire': {lvl: fireRateLvl, key: 'stellar_fire_lvl'},
-                    'hp': {lvl: hpLvl, key: 'stellar_hp_lvl'}, 'armor': {lvl: armorLvl, key: 'stellar_armor_lvl'},
-                    'magnet': {lvl: magnetLvl, key: 'stellar_magnet_lvl'}, 'luck': {lvl: luckLvl, key: 'stellar_luck_lvl'},
-                    'forge': {lvl: forgeLvl, key: 'stellar_forge_lvl'}, 'spread': {lvl: spreadLvl, key: 'stellar_spread_lvl'},
-                    'rapid': {lvl: rapidLvl, key: 'stellar_rapid_lvl'}, 'laser': {lvl: laserLvl, key: 'stellar_laser_lvl'},
-                    'dronefire': {lvl: droneFireLvl, key: 'stellar_dronefire_lvl'}, 'dronecount': {lvl: droneCountLvl, key: 'stellar_dronecount_lvl'}
+                    'dmg': {lvl: weaponDamageLvl, key: 'stellar_dmg_lvl', max: 8}, 'fire': {lvl: fireRateLvl, key: 'stellar_fire_lvl', max: 8},
+                    'hp': {lvl: hpLvl, key: 'stellar_hp_lvl', max: 8}, 'armor': {lvl: armorLvl, key: 'stellar_armor_lvl', max: 8},
+                    'magnet': {lvl: magnetLvl, key: 'stellar_magnet_lvl', max: 8}, 'luck': {lvl: luckLvl, key: 'stellar_luck_lvl', max: 8},
+                    'forge': {lvl: forgeLvl, key: 'stellar_forge_lvl', max: 8}, 'spread': {lvl: spreadLvl, key: 'stellar_spread_lvl', max: 8},
+                    'rapid': {lvl: rapidLvl, key: 'stellar_rapid_lvl', max: 8}, 'laser': {lvl: laserLvl, key: 'stellar_laser_lvl', max: 8},
+                    'dronefire': {lvl: droneFireLvl, key: 'stellar_dronefire_lvl', max: 8}, 'dronecount': {lvl: droneCountLvl, key: 'stellar_dronecount_lvl', max: 3}
                 };
                 let tgt = upgradeMap[val];
+                if (tgt.lvl >= tgt.max) return;
+                
                 costToDeduct = tierCosts[tgt.lvl];
+                if (savedCredits < costToDeduct) return; 
+                
                 savedCredits -= costToDeduct; 
                 
                 if(val==='dmg') weaponDamageLvl++; else if(val==='fire') fireRateLvl++; else if(val==='hp') hpLvl++; else if(val==='armor') armorLvl++; else if(val==='magnet') magnetLvl++; else if(val==='luck') luckLvl++; else if(val==='forge') forgeLvl++; else if(val==='spread') spreadLvl++; else if(val==='rapid') rapidLvl++; else if(val==='laser') laserLvl++; else if(val==='dronefire') droneFireLvl++; else if(val==='dronecount') droneCountLvl++;
                 
-                localStorage.setItem(tgt.key, tgt.lvl + 1); localStorage.setItem('stellar_credits', savedCredits); 
+                localStorage.setItem(tgt.key, tgt.lvl + 1); 
+                localStorage.setItem('stellar_credits', savedCredits); 
             } else {
                 costToDeduct = parseInt(costAttr);
                 if (isOwned) {
                     if (type === 'ship') { equippedShip = val; localStorage.setItem('stellar_ship_design', equippedShip); } 
                     else if (type === 'bg') { equippedBG = val; localStorage.setItem('stellar_bg', equippedBG); }
                 } else {
+                    if (savedCredits < costToDeduct) return; 
                     savedCredits -= costToDeduct; localStorage.setItem('stellar_credits', savedCredits);
                     if (type === 'ship') { unlockedShips.push(val); equippedShip = val; localStorage.setItem('stellar_unlocks_ships', JSON.stringify(unlockedShips)); localStorage.setItem('stellar_ship_design', equippedShip); } 
                     else if (type === 'bg') { unlockedBGs.push(val); equippedBG = val; localStorage.setItem('stellar_bg_unlocks', JSON.stringify(unlockedBGs)); localStorage.setItem('stellar_bg', equippedBG); } 
@@ -731,76 +990,128 @@
             }
             
             updateDisplays();
-            openLoreModal(type, val, costAttr);
-        });
-
-        document.getElementById('confirm-wipe-btn').addEventListener('click', () => { localStorage.clear(); location.reload(); });
-
-        document.getElementById('prestige-btn').addEventListener('click', () => {
-            if(confirm(`Prestige removes all Upgrades, Ships, and Credits, but grants a permanent +1.0x Multiplier bonus. Proceed?`)) {
-                prestigeCount++; localStorage.setItem('stellar_prestige', prestigeCount);
-                savedCredits = 0; equippedShip = 'basic'; equippedBG = 'default';
-                unlockedShips = ['basic']; unlockedBGs = ['default']; unlockedUpgrades = [];
-                weaponDamageLvl = 0; fireRateLvl = 0; hpLvl = 0; armorLvl = 0; magnetLvl = 0; luckLvl = 0; forgeLvl = 0; totalXP = 0;
-                spreadLvl = 0; rapidLvl = 0; laserLvl = 0; droneFireLvl = 0; droneCountLvl = 0;
-                localStorage.setItem('stellar_xp', 0);
-                prestigeMult = 1.0 + prestigeCount;
-                updateDisplays();
-            }
+            openLoreModal(type, val, costAttr); 
         });
 
         function startGame() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            document.getElementById('menu').style.display = 'none'; document.getElementById('death-screen').style.display = 'none';
-            document.getElementById('ui').style.display = 'block'; document.body.style.cursor = 'none'; 
-            
-            score = 0; roundCredits = 0; comboMultiplier = 1.0; globalSpeed = 1.0; 
-            
-            phase = 1; phaseTimer = 180;
-            phaseFramesRemaining = 3600; // 60s Phase length
+            try {
+                initAudio(); 
+                document.getElementById('menu').style.display = 'none'; 
+                document.getElementById('death-screen').style.display = 'none';
+                document.getElementById('ui').style.display = 'block'; 
+                document.body.style.cursor = 'none'; 
+                
+                score = 0; roundCredits = 0; comboMultiplier = 1.0; globalSpeed = 1.0; 
+                
+                phase = 1; phaseTimer = 180;
+                phaseFramesRemaining = 3600;
 
-            activePowerup = null; powerupTimer = 0; document.getElementById('powerup-indicator').style.display = 'none';
-            mouse.x = width / 2; mouse.y = height / 2;
+                activePowerup = null; powerupTimer = 0; 
+                
+                empCooldown = 0; gravCooldown = 0; phaseCooldown = 0;
+                phaseShiftActive = false; overdriveStacks = 0; gravityWells.length = 0;
 
-            maxArmor = 100 + (armorLvl * 30); maxHP = 100 + (hpLvl * 40);
-            playerArmor = maxArmor; playerHP = maxHP;
-            document.getElementById('armor-bar').style.width = "100%"; document.getElementById('hp-bar').style.width = "100%";
-            
-            shieldActive = unlockedUpgrades.includes('shield'); document.getElementById('shield-indicator').style.display = shieldActive ? 'block' : 'none';
-            droneActive = unlockedUpgrades.includes('drone');
-            if(unlockedUpgrades.includes('emp')) { document.getElementById('emp-indicator').style.display = 'block'; empCooldown = 0; }
-            
-            uiRoundXp.innerText = score; uiRoundCredits.innerText = "0.00";
-            scoreEl.innerText = score; updateMultiplierUI();
-            
-            asteroids.forEach(a => a.spawn(Math.random() * 500));
-            meteors.forEach(m => m.spawn(Math.random() * 1500)); 
-            diamonds.forEach(d => d.spawn(Math.random() * 1000));
-            particles.length = 0; trailParticles.length = 0; bullets.length = 0; droppedPowerups.length = 0; enemies.length = 0; bosses.length = 0; floatingTexts.length = 0;
-            
-            gameActive = true;
+                mouse.x = width / 2; mouse.y = height / 2;
+
+                maxArmor = 100 + (armorLvl * 30); maxHP = 100 + (hpLvl * 40);
+                playerArmor = maxArmor; playerHP = maxHP;
+                document.getElementById('armor-bar').style.width = "100%"; document.getElementById('hp-bar').style.width = "100%";
+                
+                shieldActive = unlockedUpgrades.includes('shield'); document.getElementById('shield-indicator').style.display = shieldActive ? 'block' : 'none';
+                droneActive = unlockedUpgrades.includes('drone');
+                
+                document.getElementById('hud-abilities').style.display = 'flex';
+                document.getElementById('btn-emp').style.display = unlockedUpgrades.includes('emp') ? 'flex' : 'none';
+                document.getElementById('btn-grav').style.display = unlockedUpgrades.includes('gravity_well') ? 'flex' : 'none';
+                document.getElementById('btn-phase').style.display = unlockedUpgrades.includes('phase_shift') ? 'flex' : 'none';
+                
+                if(uiRoundXp) uiRoundXp.innerText = score; 
+                if(uiRoundCredits) uiRoundCredits.innerText = "0.00";
+                if(scoreEl) scoreEl.innerText = score; 
+                updateMultiplierUI();
+                
+                asteroids.forEach(a => a.spawn(Math.random() * 500));
+                meteors.forEach(m => m.spawn(Math.random() * 1500)); 
+                diamonds.forEach(d => d.spawn(Math.random() * 1000));
+                particles.length = 0; trailParticles.length = 0; bullets.length = 0; droppedPowerups.length = 0; enemies.length = 0; bosses.length = 0; floatingTexts.length = 0;
+                
+                gameActive = true;
+            } catch(e) { console.error("Launch Error: ", e); }
         }
 
         function triggerGameOver(cause) {
-            gameActive = false; document.getElementById('ui').style.display = 'none'; document.body.style.cursor = 'default';
+            gameActive = false; document.getElementById('ui').style.display = 'none'; document.getElementById('hud-abilities').style.display = 'none'; document.body.style.cursor = 'default';
             createExplosion(mouse.x, mouse.y, 100, 0, 40, 100, 50, 15); triggerShake(20); playSound('explosion');
-            
-            totalXP += score; localStorage.setItem('stellar_xp', totalXP);
             
             setTimeout(() => {
                 document.getElementById('death-cause').innerText = cause;
-                document.getElementById('ds-score').innerText = score;
-                document.getElementById('ds-credits').innerText = roundCredits.toFixed(2);
-                updateDisplays(); document.getElementById('death-screen').style.display = 'flex';
+                const finalScoreEl = document.getElementById('ds-final-score');
+                const breakdownCont = document.getElementById('ds-credits-breakdown');
+                const creditsEl = document.getElementById('ds-credits');
+                
+                document.getElementById('death-screen').style.display = 'flex';
+                document.getElementById('ds-menu-btn').disabled = true;
+                document.getElementById('play-again-btn').disabled = true;
+                document.getElementById('ds-hangar-btn').disabled = true;
+
+                finalScoreEl.innerText = score;
+
+                if (prestigeCount > 0) {
+                    breakdownCont.style.display = 'flex';
+                    document.getElementById('ds-base-credits').innerText = roundCredits.toFixed(2);
+                    document.getElementById('ds-prestige-mult').innerText = prestigeMult.toFixed(1);
+                    
+                    let targetCredits = roundCredits * prestigeMult;
+                    let currentAnimCredits = roundCredits;
+                    
+                    creditsEl.innerText = currentAnimCredits.toFixed(2);
+                    
+                    let steps = 40;
+                    let stepCount = 0;
+                    
+                    setTimeout(() => {
+                        playSound('powerup');
+                        let animInterval = setInterval(() => {
+                            stepCount++;
+                            currentAnimCredits += (targetCredits - roundCredits) / steps;
+                            creditsEl.innerText = currentAnimCredits.toFixed(2);
+                            creditsEl.style.transform = `scale(${1 + Math.sin(stepCount * 0.2) * 0.1})`;
+                            
+                            if (stepCount >= steps) {
+                                clearInterval(animInterval);
+                                creditsEl.innerText = targetCredits.toFixed(2);
+                                creditsEl.style.transform = 'scale(1)';
+                                creditsEl.style.color = '#33ff88';
+                                creditsEl.style.textShadow = "0 0 20px #33ff88";
+                                playSound('achievement');
+                                
+                                finalizeSave();
+                            }
+                        }, 25);
+                    }, 500);
+                } else {
+                    breakdownCont.style.display = 'none';
+                    creditsEl.innerText = roundCredits.toFixed(2);
+                    finalizeSave();
+                }
+                
+                function finalizeSave() {
+                    totalXP += score; localStorage.setItem('stellar_xp', totalXP);
+                    if (score > savedHighScore) { savedHighScore = score; localStorage.setItem('stellar_highscore', savedHighScore); }
+                    updateDisplays();
+                    document.getElementById('ds-menu-btn').disabled = false;
+                    document.getElementById('play-again-btn').disabled = false;
+                    document.getElementById('ds-hangar-btn').disabled = false;
+                }
             }, 1500);
         }
 
+        // --- BUTTON LISTENER BINDINGS REPAIRED ---
         document.getElementById('play-btn').addEventListener('click', startGame);
         document.getElementById('play-again-btn').addEventListener('click', startGame);
-        
-        // SHOP NAVIGATION FIX
         document.getElementById('ds-menu-btn').addEventListener('click', () => { document.getElementById('death-screen').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; });
-        document.getElementById('in-game-menu-btn').addEventListener('click', () => { gameActive = false; document.getElementById('ui').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; document.body.style.cursor = 'default'; updateDisplays(); });
+        document.getElementById('ds-hangar-btn').addEventListener('click', () => { document.getElementById('death-screen').style.display = 'none'; document.getElementById('shop').style.display = 'flex'; updateDisplays(); });
+        document.getElementById('in-game-menu-btn').addEventListener('click', () => { gameActive = false; document.getElementById('ui').style.display = 'none'; document.getElementById('hud-abilities').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; document.body.style.cursor = 'default'; updateDisplays(); });
         document.getElementById('open-shop-btn').addEventListener('click', () => { document.getElementById('menu').style.display = 'none'; document.getElementById('shop').style.display = 'flex'; updateDisplays(); });
         document.getElementById('close-shop-btn').addEventListener('click', () => { document.getElementById('shop').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; updateDisplays(); });
 
@@ -824,18 +1135,44 @@
             update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1.0; }
         }
 
+        class GravityWell {
+            constructor(x, y) { this.x = x; this.y = y; this.life = 180; this.radius = 0; }
+            update(index) {
+                this.life--; this.radius = Math.min(200, this.radius + 10);
+                
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(136, 170, 255, ${Math.max(0, this.life/180 * 0.2)})`; ctx.fill();
+                
+                ctx.beginPath(); ctx.arc(this.x, this.y, 25 + Math.sin(Date.now()/100)*5, 0, Math.PI*2);
+                ctx.fillStyle = '#050011'; ctx.shadowBlur = 30; ctx.shadowColor = '#88aaff'; ctx.fill(); ctx.shadowBlur = 0;
+
+                const pull = (obj) => {
+                    let dx = this.x - obj.x; let dy = this.y - obj.y; let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist > 0 && dist < this.radius + 100) { obj.x += (dx/dist) * 4; obj.y += (dy/dist) * 4; }
+                };
+                enemies.forEach(pull); asteroids.forEach(pull); meteors.forEach(pull);
+                
+                if (this.life <= 0) {
+                    createExplosion(this.x, this.y, 100, 220, 40, 100, 70, 15);
+                    triggerShake(35); playSound('explosion');
+                    enemies.forEach(e => { if(Math.sqrt((this.x-e.x)**2 + (this.y-e.y)**2) < 250) e.hp -= 35; });
+                    bosses.forEach(b => { if(Math.sqrt((this.x-b.x)**2 + (this.y-b.y)**2) < 350) b.hp -= 60; });
+                    asteroids.forEach(a => { if(Math.sqrt((this.x-a.x)**2 + (this.y-a.y)**2) < 250) a.detonate(); });
+                    gravityWells.splice(index, 1);
+                }
+            }
+        }
+
         class Bullet {
             constructor(x, y, vx, vy, isEnemy = false, isLaser = false, isDrone = false, dmgMult = 1.0) { 
                 this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.isEnemy = isEnemy; this.life = 100; 
                 this.isLaser = isLaser; this.isDrone = isDrone;
-                
                 this.damage = isEnemy ? 1 : (1.0 + weaponDamageLvl * 0.5) * dmgMult; 
                 if (isLaser) this.damage *= (5 + laserLvl * 1.5); 
                 if (isDrone) this.damage *= 0.5;
             }
             update() { 
                 this.x += this.vx; this.y += this.vy; this.life--; 
-                
                 if (this.isLaser) {
                     ctx.fillStyle = this.isEnemy ? '#ff3300' : '#ff00ff'; 
                     ctx.shadowBlur = 10; ctx.shadowColor = this.isEnemy ? '#ff3300' : '#ff00ff';
@@ -1022,13 +1359,22 @@
                     droppedPowerups.push({ x: this.x, y: this.y, type: types[Math.floor(Math.random()*types.length)], vy: 2 });
                 }
                 comboMultiplier = Math.min(10.0, Math.round((comboMultiplier + 0.1) * 10) / 10);
-                let pointsGained = Math.floor((Math.floor(Math.random() * 40) + 30) * comboMultiplier * prestigeMult);
+                
+                let pointsGained = Math.floor(Math.random() * 40) + 30;
                 score += pointsGained; uiRoundXp.innerText = score;
-                let cashEarned = ((Math.random() * 1.5) + 0.5 + (forgeLvl * 0.5)) * comboMultiplier * prestigeMult;
-                savedCredits = parseFloat((savedCredits + cashEarned).toFixed(2)); roundCredits += cashEarned;
+                
+                let bountyMult = unlockedUpgrades.includes('bounty_hunter') ? 1.25 : 1.0;
+                let cashEarnedBase = ((Math.random() * 1.5) + 0.5 + (forgeLvl * 0.5)) * comboMultiplier * bountyMult;
+                let cashEarnedTotal = cashEarnedBase * prestigeMult;
+                
+                savedCredits = parseFloat((savedCredits + cashEarnedTotal).toFixed(2)); 
+                roundCredits += cashEarnedBase;
+                
                 uiRoundCredits.innerText = roundCredits.toFixed(2); localStorage.setItem('stellar_credits', savedCredits); 
-                if (score > savedHighScore) { savedHighScore = score; localStorage.setItem('stellar_highscore', savedHighScore); }
+                
                 floatingTexts.push(new FloatingText(this.x, this.y, "+" + pointsGained, "#ffaa00"));
+                floatingTexts.push(new FloatingText(this.x, this.y + 20, "+$" + cashEarnedBase.toFixed(2), "#00ffff"));
+                
                 updateMultiplierUI(); flashScoreBoard(); this.spawn(Math.random() * 800 + 200); 
             }
         }
@@ -1065,13 +1411,20 @@
             }
             detonate() {
                 createExplosion(this.x, this.y, 30, 180, 20, 100, 80, 6); playSound('powerup'); triggerShake(5);
-                let pts = Math.floor((Math.floor(Math.random() * 400) + 100) * comboMultiplier * prestigeMult);
+                
+                let pts = Math.floor(Math.random() * 400) + 100;
                 score += pts; uiRoundXp.innerText = score;
-                let cashFound = (Math.floor(Math.random() * 50) + 50 + (forgeLvl * 5)) * Math.min(10.0, comboMultiplier) * prestigeMult;
-                savedCredits = parseFloat((savedCredits + cashFound).toFixed(2)); roundCredits += cashFound;
+                
+                let bountyMult = unlockedUpgrades.includes('bounty_hunter') ? 1.25 : 1.0;
+                let cashFoundBase = (Math.floor(Math.random() * 50) + 50 + (forgeLvl * 5)) * Math.min(10.0, comboMultiplier) * bountyMult;
+                let cashFoundTotal = cashFoundBase * prestigeMult;
+                
+                savedCredits = parseFloat((savedCredits + cashFoundTotal).toFixed(2)); 
+                roundCredits += cashFoundBase;
+                
                 uiRoundCredits.innerText = roundCredits.toFixed(2); localStorage.setItem('stellar_credits', savedCredits); 
-                if (score > savedHighScore) { savedHighScore = score; localStorage.setItem('stellar_highscore', savedHighScore); }
-                floatingTexts.push(new FloatingText(this.x, this.y, "+$" + cashFound.toFixed(2), "#00ffff"));
+                
+                floatingTexts.push(new FloatingText(this.x, this.y, "+$" + cashFoundBase.toFixed(2), "#00ffff"));
                 flashScoreBoard(); this.spawn(Math.random() * 2000 + 1000); 
             }
         }
@@ -1092,12 +1445,20 @@
                 }
                 if (this.hp <= 0) {
                     createExplosion(this.x, this.y, 40, 100, 50, 100, 50, 6); playSound('explosion'); triggerShake(8);
-                    let pts = Math.floor(500 * prestigeMult); score += pts; uiRoundXp.innerText = score; flashScoreBoard(); 
-                    let cashFound = (Math.floor(Math.random() * 40) + 30 + (forgeLvl*2)) * prestigeMult; 
-                    savedCredits = parseFloat((savedCredits + cashFound).toFixed(2)); roundCredits += cashFound;
+                    
+                    let pts = 500; score += pts; uiRoundXp.innerText = score; flashScoreBoard(); 
+                    
+                    let bountyMult = unlockedUpgrades.includes('bounty_hunter') ? 1.25 : 1.0;
+                    let cashFoundBase = (Math.floor(Math.random() * 40) + 30 + (forgeLvl*2)) * bountyMult; 
+                    let cashFoundTotal = cashFoundBase * prestigeMult;
+                    
+                    savedCredits = parseFloat((savedCredits + cashFoundTotal).toFixed(2)); 
+                    roundCredits += cashFoundBase;
+                    
                     uiRoundCredits.innerText = roundCredits.toFixed(2); localStorage.setItem('stellar_credits', savedCredits); 
+                    
                     floatingTexts.push(new FloatingText(this.x, this.y - 15, "+" + pts, "#33ff33"));
-                    floatingTexts.push(new FloatingText(this.x, this.y + 15, "+$" + cashFound.toFixed(2), "#00ffff"));
+                    floatingTexts.push(new FloatingText(this.x, this.y + 15, "+$" + cashFoundBase.toFixed(2), "#00ffff"));
                     enemies.splice(index, 1); return;
                 }
                 if (this.x > width + 50) enemies.splice(index, 1);
@@ -1118,7 +1479,7 @@
             }
             update(index) {
                 if (this.y < 120) this.y += 2; else this.x += Math.sin(Date.now() / (this.type==='interceptor'?400:600)) * (this.type==='interceptor'?5:3);
-                this.x = Math.max(this.radius, Math.min(width - this.radius, this.x)); // Clamped to screen
+                this.x = Math.max(this.radius, Math.min(width - this.radius, this.x));
 
                 let fireChance = this.type === 'interceptor' ? 0.96 : (this.type === 'dreadnought' ? 0.94 : 0.92);
                 if (Math.random() > fireChance) {
@@ -1137,20 +1498,26 @@
                 
                 if (this.hp <= 0) {
                     createExplosion(this.x, this.y, 150, 200, 50, 100, 50, 12); triggerShake(30); playSound('explosion');
-                    let pts = Math.floor(5000 * prestigeMult * (phase/2)); score += pts; 
-                    let csh = (this.type==='interceptor'?500:(this.type==='dreadnought'?1000:2500)) * prestigeMult; 
-                    savedCredits += csh; roundCredits += csh;
+                    
+                    if (unlockedUpgrades.includes('overdrive')) { overdriveStacks++; floatingTexts.push(new FloatingText(this.x, this.y - 40, "OVERDRIVE!", "#ffaa00")); }
+
+                    let pts = Math.floor(5000 * (phase/2)); score += pts; 
+                    
+                    let bountyMult = unlockedUpgrades.includes('bounty_hunter') ? 1.25 : 1.0;
+                    let cshBase = (this.type==='interceptor'?500:(this.type==='dreadnought'?1000:2500)) * bountyMult; 
+                    let cshTotal = cshBase * prestigeMult;
+                    
+                    savedCredits += cshTotal; 
+                    roundCredits += cshBase;
+                    
                     uiRoundCredits.innerText = roundCredits.toFixed(2); uiRoundXp.innerText = score; flashScoreBoard();
-                    floatingTexts.push(new FloatingText(this.x, this.y, "BOSS DEFEATED +$" + csh.toFixed(2), "#ff00ff"));
+                    floatingTexts.push(new FloatingText(this.x, this.y, "BOSS DEFEATED +$" + cshBase.toFixed(2), "#ff00ff"));
                     
-                    if(!achievements.boss_slayer) { 
-                        achievements.boss_slayer = true; 
-                        localStorage.setItem('stellar_achievements', JSON.stringify(achievements));
-                        showAchievementPopup(achList.find(a=>a.id==='boss_slayer'));
-                    }
+                    let maxP = parseInt(localStorage.getItem('stellar_max_phase')) || 0;
+                    if(phase > maxP) { localStorage.setItem('stellar_max_phase', phase); }
+                    checkAchievements();
                     
-                    phase++; phaseTimer = 180; phaseFramesRemaining = 3600; // Reset Time
-                    
+                    phase++; phaseTimer = 180; phaseFramesRemaining = 3600; 
                     bosses.splice(index, 1); return;
                 }
 
@@ -1185,22 +1552,32 @@
 
             if (gameActive) {
                 globalSpeed = Math.min(3.5, globalSpeed + 0.0004); 
+                
+                if (unlockedUpgrades.includes('nano_bots') && playerHP < maxHP) playerHP = Math.min(maxHP, playerHP + 0.05);
                 if (playerArmor < maxArmor) playerArmor = Math.min(maxArmor, playerArmor + 0.15); 
 
-                // PHASE TIMING LOGIC
                 if (!bossActive) {
                     phaseFramesRemaining--;
-                    if (phaseFramesRemaining <= 0) {
-                        bosses.push(new Boss());
-                    }
+                    if (phaseFramesRemaining <= 0) { bosses.push(new Boss()); }
                 }
                 
                 if (Math.random() > 0.995 && enemies.length < 2) enemies.push(new AlienShip());
 
+                let now = Date.now();
                 if (unlockedUpgrades.includes('emp')) {
-                    let remaining = 30 - Math.floor((Date.now() - empCooldown) / 1000);
-                    if (remaining <= 0) { document.getElementById('emp-indicator').innerText = "EMP READY (DOUBLE TAP)"; document.getElementById('emp-indicator').style.color = "#ff00ff"; document.getElementById('emp-indicator').style.textShadow = "0 0 5px #ff00ff"; } 
-                    else { document.getElementById('emp-indicator').innerText = `EMP RECHARGING: ${remaining}s`; document.getElementById('emp-indicator').style.color = "#888"; document.getElementById('emp-indicator').style.textShadow = "none"; }
+                    let pct = Math.max(0, 30000 - (now - empCooldown)) / 30000 * 100;
+                    document.getElementById('cd-emp').style.height = pct + '%';
+                    if(pct === 0) document.getElementById('btn-emp').classList.add('ready'); else document.getElementById('btn-emp').classList.remove('ready');
+                }
+                if (unlockedUpgrades.includes('gravity_well')) {
+                    let pct = Math.max(0, 45000 - (now - gravCooldown)) / 45000 * 100;
+                    document.getElementById('cd-grav').style.height = pct + '%';
+                    if(pct === 0) document.getElementById('btn-grav').classList.add('ready'); else document.getElementById('btn-grav').classList.remove('ready');
+                }
+                if (unlockedUpgrades.includes('phase_shift')) {
+                    let pct = Math.max(0, 40000 - (now - phaseCooldown)) / 40000 * 100;
+                    document.getElementById('cd-phase').style.height = pct + '%';
+                    if(pct === 0) document.getElementById('btn-phase').classList.add('ready'); else document.getElementById('btn-phase').classList.remove('ready');
                 }
 
                 if (droneActive) {
@@ -1221,13 +1598,13 @@
                     }
                 }
 
+                let odBonus = Math.min(10, overdriveStacks) * 0.15;
                 let baseRate = 150 - (fireRateLvl * 12); 
                 let rapidDelay = Math.max(10, 40 - (rapidLvl * 4)); 
-                let fireRate = activePowerup === 'rapid' ? rapidDelay : Math.max(50, baseRate);
+                let fireRate = (activePowerup === 'rapid' ? rapidDelay : Math.max(50, baseRate)) / (1 + odBonus);
                 
                 if (mouse.clicked && Date.now() - lastShotTime > fireRate) {
                     playSound(activePowerup === 'laser' ? 'laser' : 'shoot'); lastShotTime = Date.now();
-                    
                     let spreadDmg = 1.0 + (spreadLvl * 0.3);
                     
                     if (activePowerup === 'spread') {
@@ -1250,10 +1627,11 @@
             for (let i = trailParticles.length - 1; i >= 0; i--) { trailParticles[i].update(); if (trailParticles[i].life <= 0) trailParticles.splice(i, 1); }
             for (let i = particles.length - 1; i >= 0; i--) { particles[i].update(); if (particles[i].life <= 0) particles.splice(i, 1); }
             for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].update(); if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
+            for (let i = gravityWells.length - 1; i >= 0; i--) { gravityWells[i].update(i); }
             
             for (let i = bullets.length - 1; i >= 0; i--) { 
                 bullets[i].update(); 
-                if (bullets[i].isEnemy && gameActive && Math.sqrt(Math.pow(bullets[i].x - mouse.x, 2) + Math.pow(bullets[i].y - mouse.y, 2)) < 15) {
+                if (bullets[i].isEnemy && gameActive && !phaseShiftActive && Math.sqrt(Math.pow(bullets[i].x - mouse.x, 2) + Math.pow(bullets[i].y - mouse.y, 2)) < 15) {
                     bullets.splice(i, 1); triggerShake(8); playSound('explosion');
                     
                     if (shieldActive) { 
@@ -1274,7 +1652,6 @@
 
             for (let i = droppedPowerups.length - 1; i >= 0; i--) {
                 let p = droppedPowerups[i]; p.y += p.vy;
-                
                 ctx.save(); ctx.translate(p.x, p.y); let scale = 1 + Math.sin(Date.now() / 150) * 0.15; ctx.scale(scale, scale);
                 ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'; ctx.fill();
                 
@@ -1305,7 +1682,11 @@
             enemies.forEach((e, i) => e.update(i)); bosses.forEach((b, i) => b.update(i)); asteroids.forEach(a => a.update()); diamonds.forEach(d => d.update()); meteors.forEach(m => m.update()); 
 
             if (gameActive) {
-                ctx.save(); ctx.translate(mouse.x, mouse.y); drawShip(equippedShip); ctx.restore();
+                ctx.save(); ctx.translate(mouse.x, mouse.y); 
+                if (phaseShiftActive) { ctx.globalAlpha = 0.4; ctx.shadowBlur = 15; ctx.shadowColor = '#00ffff'; }
+                drawShip(equippedShip); 
+                ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+                ctx.restore();
 
                 if (playerArmor > 0 || playerHP > 0) {
                     let barY = mouse.y + 40;
@@ -1318,7 +1699,6 @@
                     ctx.strokeStyle = '#00ffff'; ctx.strokeRect(mouse.x - 30, barY - 6, 60, 4);
                 }
 
-                // Phase Notifications
                 if (phaseTimer > 0) {
                     phaseTimer--; ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, phaseTimer / 30)})`;
                     ctx.font = "bold 60px Orbitron"; ctx.textAlign = "center";
@@ -1328,7 +1708,6 @@
                 ctx.fillStyle = "rgba(255, 255, 255, 0.5)"; ctx.font = "bold 24px Orbitron"; ctx.textAlign = "left";
                 ctx.fillText("PHASE " + phase, 20, height - 30);
 
-                // Timing Tracker UI
                 if (!bossActive) {
                     let sec = Math.ceil(phaseFramesRemaining / 60);
                     phaseCountdownEl.innerText = "BOSS IN: " + sec + "s";
@@ -1343,6 +1722,7 @@
         }
 
         updateDisplays(); animate();
+        silentAchievementUnlock = false;
     </script>
 </body>
 </html>
