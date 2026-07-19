@@ -1,0 +1,27 @@
+{
+  "name": "stellar-drifter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daystar-1nine/Stellar-Drifter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/daystar-1nine/Stellar-Drifter/issues"
+  },
+  "homepage": "https://github.com/daystar-1nine/Stellar-Drifter#readme",
+  "devDependencies": {
+    "vite": "^8.1.4"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  }
+}
