@@ -22,6 +22,7 @@ export class UIManager {
             <button id="btn-open-ach" class="icon-btn" title="Achievements">🏅</button>
             <button id="btn-open-missions" class="icon-btn" title="Daily Missions" style="color:#ffff00; border-color:#ffff00;">🎯</button>
             <button id="btn-open-coffee" class="icon-btn" title="Support Dev">☕</button>
+            <button id="btn-open-settings" class="icon-btn" title="Settings">⚙️</button>
             <button id="btn-open-credits" class="icon-btn" title="Credits">👥</button>
             <button id="btn-open-wipe" class="icon-btn" style="border-color: #ff4444; color: #ff4444; box-shadow: 0 0 10px rgba(255,68,68,0.2);" title="Wipe Save">☠️</button>
         </div>
@@ -29,6 +30,42 @@ export class UIManager {
     </div>
 
     <!-- MODALS -->
+
+    <div id="modal-settings" class="info-modal">
+        <button class="btn-close-floating close-modal-btn">X</button>
+        <div class="info-modal-content">
+            <h2 style="color: #00ffff; text-shadow: 0 0 10px #00ffff;">SETTINGS</h2>
+            
+            <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="color: #ffaa00; margin-top: 0;">AUDIO</h3>
+                <div class="slider-container">
+                    <label>MASTER VOLUME</label>
+                    <input type="range" id="vol-master" min="0" max="100" value="100">
+                </div>
+                <div class="slider-container">
+                    <label>MUSIC VOLUME</label>
+                    <input type="range" id="vol-music" min="0" max="100" value="100">
+                </div>
+                <div class="slider-container">
+                    <label>SFX VOLUME</label>
+                    <input type="range" id="vol-sfx" min="0" max="100" value="100">
+                </div>
+            </div>
+
+            <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                <h3 style="color: #ffaa00; margin-top: 0;">GRAPHICS QUALITY</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn quality-btn" data-quality="low" style="flex:1;">LOW</button>
+                    <button class="btn quality-btn" data-quality="medium" style="flex:1;">MED</button>
+                    <button class="btn quality-btn" data-quality="high" style="flex:1; border-color: #00ffff; box-shadow: 0 0 10px rgba(0,255,255,0.5);">HIGH</button>
+                </div>
+                <p style="font-size: 10px; color: #888; margin-top: 10px;">High enables Full Post-Processing (Bloom, Grain, Chromatic Aberration) and max particle counts.</p>
+            </div>
+            
+            <div class="footer-text-modal">Made with ❤️ By Dev</div>
+        </div>
+    </div>
+
 
     <div id="modal-missions" class="info-modal">
         <button class="btn-close-floating close-modal-btn">X</button>

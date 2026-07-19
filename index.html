@@ -3,15 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Shatter Space: A high-octane 2D space shooter with AAA glassmorphism UI, roguelite upgrades, and intense boss fights.">
+    <meta name="theme-color" content="#050510">
     <title>Shatter Space</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles/main.css">
     <link rel="stylesheet" href="/src/styles/ui.css">
 </head>
 <body>
+    <div id="loading-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#050510; z-index:9999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#00ffff; font-family:monospace; font-size:24px; transition: opacity 0.5s ease;"><div>INITIALIZING WEAPONS SYSTEMS...</div></div>
     <canvas id="bg-canvas" style="position:absolute; top:0; left:0; z-index:-1;"></canvas>
     <canvas id="canvas" style="position:absolute; top:0; left:0; z-index:0; background:transparent;"></canvas>
 
+    <div id="virtual-cursor" style="display: none; position: absolute; width: 15px; height: 15px; background: rgba(0, 255, 255, 0.8); border: 2px solid white; border-radius: 50%; pointer-events: none; z-index: 10000; box-shadow: 0 0 10px cyan; transition: transform 0.1s ease;"></div>
+
     <script type="module" src="/src/main.js"></script>
+    <div id="damage-flash" style="position:fixed; top:0; left:0; width:100%; height:100%; background:radial-gradient(circle, rgba(255,0,0,0) 50%, rgba(255,0,0,0.5) 100%); opacity:0; pointer-events:none; z-index:9998; transition: opacity 0.15s ease-out;"></div>
 </body>
 </html>

@@ -120,3 +120,22 @@
 ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
 ::-webkit-scrollbar-thumb { background: rgba(0, 255, 255, 0.3); border-radius: 4px; border: 1px solid rgba(0,255,255,0.1); }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0, 255, 255, 0.6); }
+
+/* PHASE 4: UI/UX Smooth Animations */
+#hp-bar, #armor-bar {
+    transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+@keyframes modalPop {
+    0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.info-modal-content {
+    animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Settings Sliders */
+.slider-container { margin-bottom: 15px; }
+.slider-container label { display: block; margin-bottom: 5px; color: #88aaff; font-size: 12px; font-weight: bold; }
+.slider-container input[type=range] { width: 100%; cursor: pointer; }

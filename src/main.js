@@ -1,4 +1,6 @@
 import { UIManager } from './ui/UIManager.js';
+import { audio } from './core/AudioEngine.js';
+import { Pool } from './core/ObjectPool.js';
 UIManager.init();
 import "./core/Renderer.js";
 import { DailyMissions } from "./features/DailyMissions.js";
@@ -89,6 +91,31 @@ let frameCount = 0;
         document.getElementById('btn-open-ach').addEventListener('click', () => { renderAchievements(); document.getElementById('modal-achievements').style.display = 'flex'; });
         document.getElementById('btn-open-coffee').addEventListener('click', () => { document.getElementById('modal-coffee').style.display = 'flex'; });
         document.getElementById('btn-open-credits').addEventListener('click', () => { document.getElementById('modal-credits').style.display = 'flex'; });
+
+        // --- PHASE 4: SETTINGS HOOKS ---
+        document.getElementById('btn-open-settings').addEventListener('click', () => { 
+            document.getElementById('modal-settings').style.display = 'flex'; 
+        });
+
+        document.getElementById('vol-master').addEventListener('input', (e) => {
+            if (window.audio) window.audio.setMasterVolume(e.target.value / 100);
+        });
+        document.getElementById('vol-music').addEventListener('input', (e) => {
+            if (window.audio) { window.audio.musicVolume = e.target.value / 100; if (window.audio.currentBgm && window.audio.tracks[window.audio.currentBgm]) window.audio.tracks[window.audio.currentBgm].volume(window.audio.musicVolume * window.audio.masterVolume); }
+        });
+        document.getElementById('vol-sfx').addEventListener('input', (e) => {
+            if (window.audio) window.audio.sfxVolume = e.target.value / 100;
+        });
+
+        document.querySelectorAll('.quality-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.quality-btn').forEach(b => { b.style.borderColor = ''; b.style.boxShadow = ''; });
+                e.target.style.borderColor = '#00ffff'; e.target.style.boxShadow = '0 0 10px rgba(0,255,255,0.5)';
+                const level = e.target.dataset.quality;
+                if (window.rendererInstance) window.rendererInstance.setQuality(level);
+            });
+        });
+
         document.getElementById('btn-open-wipe').addEventListener('click', () => { document.getElementById('modal-wipe').style.display = 'flex'; });
 
         const LORE = {
@@ -296,7 +323,21 @@ let frameCount = 0;
             });
         });
 
-        let gameActive = false;
+        
+// --- PHASE 2: JUICE VARIABLES ---
+window.hitStopFrames = 0;
+window.hitStop = (frames) => { window.hitStopFrames = frames; };
+window.cameraOffset = { x: 0, y: 0 };
+window.triggerDamageFlash = () => {
+    const flash = document.getElementById('damage-flash');
+    if (flash) {
+        flash.style.opacity = '1';
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+    }
+};
+
+let gameActive = false;
+
         let score = 0, roundCredits = 0;
         let comboMultiplier = 1.0;
         let prestigeMult = 1.0 + prestigeCount; 
@@ -348,7 +389,7 @@ let frameCount = 0;
             meteors.forEach(m => m.spawn(Math.random() * 2000 + 1000));
             asteroids.forEach(a => { score += 30; createExplosion(a.x, a.y, 10, 20, 30, 80, 50, 4); a.spawn(Math.random() * 800); });
             enemies.length = 0; bullets.length = 0; flashScoreBoard(); uiRoundXp.innerText = score;
-            floatingTexts.push(new FloatingText(width/2, height/2 - 50, "EMP DEPLOYED", "#ff00ff"));
+            floatingTexts.push(window.textPool.spawn(width/2, height/2 - 50, "EMP DEPLOYED", "#ff00ff"));
         }
 
         function triggerGrav() {
@@ -356,7 +397,7 @@ let frameCount = 0;
             gravCooldown = Date.now();
             playSound('powerup');
             gravityWells.push(new GravityWell(mouse.x, mouse.y));
-            floatingTexts.push(new FloatingText(mouse.x, mouse.y - 40, "GRAVITY WELL", "#88aaff"));
+            floatingTexts.push(window.textPool.spawn(mouse.x, mouse.y - 40, "GRAVITY WELL", "#88aaff"));
         }
 
         function triggerPhase() {
@@ -364,7 +405,7 @@ let frameCount = 0;
             phaseCooldown = Date.now();
             phaseShiftActive = true;
             playSound('powerup');
-            floatingTexts.push(new FloatingText(mouse.x, mouse.y - 40, "PHASE SHIFT", "#00ffff"));
+            floatingTexts.push(window.textPool.spawn(mouse.x, mouse.y - 40, "PHASE SHIFT", "#00ffff"));
             setTimeout(() => { phaseShiftActive = false; }, 5000); 
         }
 
@@ -677,8 +718,7 @@ let frameCount = 0;
         document.getElementById('open-shop-btn').addEventListener('click', () => { document.getElementById('menu').style.display = 'none'; document.getElementById('shop').style.display = 'flex'; updateDisplays(); });
         document.getElementById('close-shop-btn').addEventListener('click', () => { document.getElementById('shop').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; updateDisplays(); });
 
-        class FloatingText {
-            constructor(x, y, text, color) { this.x = x; this.y = y; this.text = text; this.color = color; this.life = 1.0; }
+        class FloatingText { constructor() {} init(x, y, text, color) { this.x = x; this.y = y; this.text = text; this.color = color; this.life = 1.0; }
             update() { 
                 this.y -= 1.5; this.life -= 0.02; ctx.globalAlpha = Math.max(0, this.life); 
                 ctx.font = "bold 24px Orbitron"; ctx.textAlign = "center";
@@ -725,8 +765,7 @@ let frameCount = 0;
             }
         }
 
-        class Bullet {
-            constructor(x, y, vx, vy, isEnemy = false, isLaser = false, isDrone = false, dmgMult = 1.0) { 
+        class Bullet { constructor() {} init(x, y, vx, vy, isEnemy = false, isLaser = false, isDrone = false, dmgMult = 1.0) { 
                 this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.isEnemy = isEnemy; this.life = 100; 
                 this.isLaser = isLaser; this.isDrone = isDrone;
                 this.damage = isEnemy ? 1 : (1.0 + weaponDamageLvl * 0.5) * dmgMult; 
@@ -752,22 +791,21 @@ let frameCount = 0;
                 particles.push(new Particle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, `hsl(${hueBase + Math.random() * hueRange}, ${sat}%, ${lit}%)`));
             }
         }
-
         for(let i = 0; i < 150; i++) stars.push({ x: Math.random() * width, y: Math.random() * height, size: Math.random() * 1.5, speed: (Math.random() * 0.5) + 0.1 });
 
         let gridOffset = 0;
-        function drawBackground() {
-            if (equippedBG === 'crimson') ctx.fillStyle = '#11050a'; 
-            else if (equippedBG === 'neon') ctx.fillStyle = '#050011';
-            else if (equippedBG === 'matrix') ctx.fillStyle = '#001100';
-            else ctx.fillStyle = '#050510';
-            ctx.clearRect(0, 0, width, height);
+        setTimeout(() => { 
+        const ls = document.getElementById('loading-screen');
+        if(ls) {
+            ls.style.opacity = '0';
+            setTimeout(() => ls.style.display = 'none', 500);
+        }
+    }, 1200);
+    
+    function drawBackground() {
+            ctx.clearRect(-width - 100, -height - 100, width * 3, height * 3);
             
-            if (equippedBG === 'crimson') {
-                let grad = ctx.createRadialGradient(width/2, height/2, 50, width/2, height/2, width);
-                grad.addColorStop(0, 'rgba(42, 10, 24, 0.4)'); grad.addColorStop(1, 'rgba(10, 0, 5, 0)');
-                ctx.clearRect(0, 0, width, height);
-            } else if (equippedBG === 'grid') {
+            if (equippedBG === 'grid') {
                 ctx.strokeStyle = 'rgba(51, 255, 136, 0.15)'; ctx.lineWidth = 1; gridOffset = (gridOffset + globalSpeed * 2) % 50;
                 ctx.beginPath();
                 for (let x = 0; x < width; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, height); }
@@ -890,7 +928,7 @@ let frameCount = 0;
             checkBulletCollision() {
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     if (!bullets[i].isEnemy && Math.sqrt(Math.pow(bullets[i].x - this.x, 2) + Math.pow(bullets[i].y - this.y, 2)) < this.radius + 10) {
-                        if(!bullets[i].isLaser) { bullets.splice(i, 1); return true; }
+                        if(!bullets[i].isLaser) { window.bulletPool.release(bullets.splice(i, 1)[0]); return true; }
                         return Math.random() > 0.8; 
                     }
                 }
@@ -934,8 +972,8 @@ let frameCount = 0;
                 
                 uiRoundCredits.innerText = roundCredits.toFixed(2); localStorage.setItem('stellar_credits', savedCredits); 
                 
-                floatingTexts.push(new FloatingText(this.x, this.y, "+" + pointsGained, "#ffaa00"));
-                floatingTexts.push(new FloatingText(this.x, this.y + 20, "+$" + cashEarnedBase.toFixed(2), "#00ffff"));
+                floatingTexts.push(window.textPool.spawn(this.x, this.y, "+" + pointsGained, "#ffaa00"));
+                floatingTexts.push(window.textPool.spawn(this.x, this.y + 20, "+$" + cashEarnedBase.toFixed(2), "#00ffff"));
                 
                 updateMultiplierUI(); flashScoreBoard(); this.spawn(Math.random() * 800 + 200); 
             }
@@ -986,22 +1024,21 @@ let frameCount = 0;
                 
                 uiRoundCredits.innerText = roundCredits.toFixed(2); localStorage.setItem('stellar_credits', savedCredits); 
                 
-                floatingTexts.push(new FloatingText(this.x, this.y, "+$" + cashFoundBase.toFixed(2), "#00ffff"));
+                floatingTexts.push(window.textPool.spawn(this.x, this.y, "+$" + cashFoundBase.toFixed(2), "#00ffff"));
                 flashScoreBoard(); this.spawn(Math.random() * 2000 + 1000); 
             }
         }
 
-        class AlienShip {
-            constructor() { this.x = -50; this.y = Math.random() * 150 + 50; this.vx = 3; this.radius = 20; this.hp = 5.0; }
+        class AlienShip { constructor() {} init() { this.x = -50; this.y = Math.random() * 150 + 50; this.vx = 3; this.radius = 20; this.hp = 5.0; }
             update(index) {
                 this.x += this.vx * globalSpeed;
                 if (gameActive && Math.random() > 0.5) trailParticles.push(new Particle(this.x + 20, this.y, Math.random()*2, (Math.random()-0.5), '#33ff33', true));
-                if (Math.random() > 0.98) bullets.push(new Bullet(this.x, this.y, 0, 5, true));
+                if (Math.random() > 0.98) bullets.push(window.bulletPool.spawn(this.x, this.y, 0, 5, true));
                 
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     if (!bullets[i].isEnemy && Math.sqrt(Math.pow(bullets[i].x - this.x, 2) + Math.pow(bullets[i].y - this.y, 2)) < this.radius) {
                         let dmg = bullets[i].damage; 
-                        if(!bullets[i].isLaser) { bullets.splice(i, 1); this.hp -= dmg; createExplosion(this.x, this.y, 10, 100, 50, 100, 50, 3); playSound('explosion'); } 
+                        if(!bullets[i].isLaser) { window.bulletPool.release(bullets.splice(i, 1)[0]); this.hp -= dmg; createExplosion(this.x, this.y, 10, 100, 50, 100, 50, 3); playSound('explosion'); } 
                         else { this.hp -= dmg * 0.15; if(Math.random() > 0.8) { createExplosion(this.x, this.y, 5, 100, 50, 100, 50, 3); playSound('explosion'); } }
                     }
                 }
@@ -1019,11 +1056,11 @@ let frameCount = 0;
                     
                     uiRoundCredits.innerText = roundCredits.toFixed(2); localStorage.setItem('stellar_credits', savedCredits); 
                     
-                    floatingTexts.push(new FloatingText(this.x, this.y - 15, "+" + pts, "#33ff33"));
-                    floatingTexts.push(new FloatingText(this.x, this.y + 15, "+$" + cashFoundBase.toFixed(2), "#00ffff"));
-                    let reward = dailyMissions.progressMission(1, 1); if (reward > 0) { savedCredits += reward; floatingTexts.push(new FloatingText(this.x, this.y, "MISSION COMPLETED! +$" + reward, "#ffff00")); localStorage.setItem("stellar_credits", savedCredits); } enemies.splice(index, 1); return;
+                    floatingTexts.push(window.textPool.spawn(this.x, this.y - 15, "+" + pts, "#33ff33"));
+                    floatingTexts.push(window.textPool.spawn(this.x, this.y + 15, "+$" + cashFoundBase.toFixed(2), "#00ffff"));
+                    let reward = dailyMissions.progressMission(1, 1); if (reward > 0) { savedCredits += reward; floatingTexts.push(window.textPool.spawn(this.x, this.y, "MISSION COMPLETED! +$" + reward, "#ffff00")); localStorage.setItem("stellar_credits", savedCredits); } window.alienPool.release(enemies.splice(index, 1)[0]); return;
                 }
-                if (this.x > width + 50) enemies.splice(index, 1);
+                if (this.x > width + 50) window.alienPool.release(enemies.splice(index, 1)[0]);
                 ctx.fillStyle = '#113311'; ctx.strokeStyle = '#33ff33'; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.ellipse(this.x, this.y, 30, 15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 ctx.beginPath(); ctx.arc(this.x, this.y - 5, 12, Math.PI, 0); ctx.fillStyle = 'rgba(51, 255, 51, 0.4)'; ctx.fill(); ctx.stroke();
@@ -1045,15 +1082,15 @@ let frameCount = 0;
 
                 let fireChance = this.type === 'interceptor' ? 0.96 : (this.type === 'dreadnought' ? 0.94 : 0.92);
                 if (Math.random() > fireChance) {
-                    if (this.type === 'interceptor') { bullets.push(new Bullet(this.x, this.y+this.radius/2, 0, 7, true)); } 
-                    else if (this.type === 'dreadnought') { bullets.push(new Bullet(this.x - 30, this.y+this.radius/2, 0, 6, true, true)); bullets.push(new Bullet(this.x + 30, this.y+this.radius/2, 0, 6, true, true)); } 
+                    if (this.type === 'interceptor') { bullets.push(window.bulletPool.spawn(this.x, this.y+this.radius/2, 0, 7, true)); } 
+                    else if (this.type === 'dreadnought') { bullets.push(window.bulletPool.spawn(this.x - 30, this.y+this.radius/2, 0, 6, true, true)); bullets.push(window.bulletPool.spawn(this.x + 30, this.y+this.radius/2, 0, 6, true, true)); } 
                     else { 
                         // Mothership bullet hell
                         if (!this.angleOffset) this.angleOffset = 0;
                         this.angleOffset += 0.2;
                         for(let i=0; i<8; i++) {
                             let ang = this.angleOffset + (i * Math.PI / 4);
-                            bullets.push(new Bullet(this.x, this.y, Math.cos(ang)*5, Math.sin(ang)*5, true));
+                            bullets.push(window.bulletPool.spawn(this.x, this.y, Math.cos(ang)*5, Math.sin(ang)*5, true));
                         }
                     }
                 }
@@ -1061,7 +1098,7 @@ let frameCount = 0;
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     if (!bullets[i].isEnemy && Math.sqrt(Math.pow(bullets[i].x - this.x, 2) + Math.pow(bullets[i].y - this.y, 2)) < this.radius) {
                         let dmg = bullets[i].damage; 
-                        if(!bullets[i].isLaser) { bullets.splice(i, 1); this.hp -= dmg; createExplosion(this.x, this.y + this.radius/2, 5, 200, 50, 100, 50, 2); playSound('explosion'); } 
+                        if(!bullets[i].isLaser) { window.bulletPool.release(bullets.splice(i, 1)[0]); this.hp -= dmg; createExplosion(this.x, this.y + this.radius/2, 5, 200, 50, 100, 50, 2); playSound('explosion'); } 
                         else { this.hp -= dmg * 0.15; if(Math.random() > 0.8) { createExplosion(this.x, this.y + this.radius/2, 5, 200, 50, 100, 50, 2); playSound('explosion'); } }
                     }
                 }
@@ -1069,7 +1106,7 @@ let frameCount = 0;
                 if (this.hp <= 0) {
                     createExplosion(this.x, this.y, 150, 200, 50, 100, 50, 12); triggerShake(30); playSound('explosion');
                     
-                    if (unlockedUpgrades.includes('overdrive')) { overdriveStacks++; floatingTexts.push(new FloatingText(this.x, this.y - 40, "OVERDRIVE!", "#ffaa00")); }
+                    if (unlockedUpgrades.includes('overdrive')) { overdriveStacks++; floatingTexts.push(window.textPool.spawn(this.x, this.y - 40, "OVERDRIVE!", "#ffaa00")); }
 
                     let pts = Math.floor(5000 * (phase/2)); score += pts; 
                     
@@ -1081,14 +1118,14 @@ let frameCount = 0;
                     roundCredits += cshBase;
                     
                     uiRoundCredits.innerText = roundCredits.toFixed(2); uiRoundXp.innerText = score; flashScoreBoard();
-                    floatingTexts.push(new FloatingText(this.x, this.y, "BOSS DEFEATED +$" + cshBase.toFixed(2), "#ff00ff"));
+                    floatingTexts.push(window.textPool.spawn(this.x, this.y, "BOSS DEFEATED +$" + cshBase.toFixed(2), "#ff00ff"));
                     
                     let maxP = parseInt(localStorage.getItem('stellar_max_phase')) || 0;
                     if(phase > maxP) { localStorage.setItem('stellar_max_phase', phase); }
                     checkAchievements();
                     
                     phase++; phaseTimer = 180; phaseFramesRemaining = 3600; 
-                    let reward = dailyMissions.progressMission(3, 1); if (reward > 0) { savedCredits += reward; floatingTexts.push(new FloatingText(this.x, this.y - 20, "MISSION COMPLETED! +$" + reward, "#ffff00")); localStorage.setItem("stellar_credits", savedCredits); } bosses.splice(index, 1); return;
+                    let reward = dailyMissions.progressMission(3, 1); if (reward > 0) { savedCredits += reward; floatingTexts.push(window.textPool.spawn(this.x, this.y - 20, "MISSION COMPLETED! +$" + reward, "#ffff00")); localStorage.setItem("stellar_credits", savedCredits); } bosses.splice(index, 1); return;
                 }
 
                 ctx.lineWidth = 4;
@@ -1113,8 +1150,48 @@ let frameCount = 0;
         for (let i = 0; i < 1; i++) diamonds.push(new Diamond()); 
 
 
+
+        window.bulletPool = new Pool(Bullet, 300);
+        window.alienPool = new Pool(AlienShip, 30);
+        window.textPool = new Pool(FloatingText, 50);
+
+        function toggleSettings() {
+            const modal = document.getElementById('modal-settings');
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            } else {
+                modal.style.display = 'flex';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                toggleSettings();
+            }
+        });
+
+        let prevSettingsPress = false;
+
         function animate() {
-    if (gameActive) { frameCount++; if(frameCount % 60 === 0) { let reward = dailyMissions.progressMission(2, 1); if (reward > 0) { savedCredits += reward; floatingTexts.push(new FloatingText(width/2, 100, "MISSION COMPLETED! +$" + reward, "#ffff00")); localStorage.setItem("stellar_credits", savedCredits); } } }
+            // Hit Stop freeze (2D canvas freezes, 3D background keeps going)
+            if (window.hitStopFrames > 0) {
+                window.hitStopFrames--;
+                requestAnimationFrame(animate);
+                return;
+            }
+
+            // Camera Drift / Lerp based on ship movement
+            let targetX = (mouse.x - window.innerWidth / 2) * -0.05;
+            let targetY = (mouse.y - window.innerHeight / 2) * -0.05;
+            if (gameActive) {
+                window.cameraOffset.x += (targetX - window.cameraOffset.x) * 0.05;
+                window.cameraOffset.y += (targetY - window.cameraOffset.y) * 0.05;
+            } else {
+                window.cameraOffset.x *= 0.9;
+                window.cameraOffset.y *= 0.9;
+            }
+
+    if (gameActive) { frameCount++; if(frameCount % 60 === 0) { let reward = dailyMissions.progressMission(2, 1); if (reward > 0) { savedCredits += reward; floatingTexts.push(window.textPool.spawn(width/2, 100, "MISSION COMPLETED! +$" + reward, "#ffff00")); localStorage.setItem("stellar_credits", savedCredits); } } }
             // GAMEPAD LOGIC
             const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
             const gp = gamepads[0];
@@ -1126,6 +1203,24 @@ let frameCount = 0;
                     mouse.y += gp.axes[1] * 10;
                     mouse.x = Math.max(0, Math.min(window.innerWidth, mouse.x));
                     mouse.y = Math.max(0, Math.min(window.innerHeight, mouse.y));
+                }
+                
+                // Right Stick controls scrolling
+                if (gp.axes.length > 3 && Math.abs(gp.axes[3]) > 0.1) {
+                    let el = document.elementFromPoint(mouse.x, mouse.y);
+                    if (el) {
+                        let current = el;
+                        while (current && current !== document.body) {
+                            if (current.scrollHeight > current.clientHeight) {
+                                const style = window.getComputedStyle(current);
+                                if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+                                    current.scrollTop += gp.axes[3] * 15;
+                                    break;
+                                }
+                            }
+                            current = current.parentElement;
+                        }
+                    }
                 }
                 
                 // HTML Virtual Cursor (Draws above everything)
@@ -1144,6 +1239,12 @@ let frameCount = 0;
                     cursor.style.zIndex = '999999';
                     document.body.appendChild(cursor);
                 }
+                
+                let currentSettingsPress = gp.buttons[2].pressed || (gp.buttons[9] && gp.buttons[9].pressed);
+                if (currentSettingsPress && !prevSettingsPress) {
+                    toggleSettings();
+                }
+                prevSettingsPress = currentSettingsPress;
                 
                 if (!gameActive) {
                     cursor.style.display = 'block';
@@ -1175,7 +1276,7 @@ let frameCount = 0;
                         const empBtn = document.getElementById('btn-emp');
                         if (empBtn && empBtn.style.display !== 'none' && !empBtn.classList.contains('cooldown')) empBtn.click();
                     }
-                    if (gp.buttons[2].pressed) {
+                    if (gp.buttons[4].pressed) {
                         const phaseBtn = document.getElementById('btn-phase');
                         if (phaseBtn && phaseBtn.style.display !== 'none' && !phaseBtn.classList.contains('cooldown')) phaseBtn.click();
                     }
@@ -1203,7 +1304,7 @@ let frameCount = 0;
                     if (phaseFramesRemaining <= 0) { bosses.push(new Boss()); }
                 }
                 
-                if (Math.random() > 0.995 && enemies.length < 2) enemies.push(new AlienShip());
+                if (Math.random() > 0.995 && enemies.length < 2) enemies.push(window.alienPool.spawn());
 
                 let now = Date.now();
                 if (unlockedUpgrades.includes('emp')) {
@@ -1234,7 +1335,7 @@ let frameCount = 0;
                         ctx.shadowBlur = 10; ctx.shadowColor = '#00ffaa'; ctx.fillStyle = '#00ffaa'; ctx.beginPath(); ctx.arc(drX, drY, 6, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
                         
                         if (Date.now() - droneLastShot > droneDelay) { 
-                            bullets.push(new Bullet(drX, drY, 0, -12, false, false, true, 1.0)); 
+                            bullets.push(window.bulletPool.spawn(drX, drY, 0, -12, false, false, true, 1.0)); 
                             if(d === numDrones - 1) droneLastShot = Date.now(); 
                         }
                     }
@@ -1250,13 +1351,13 @@ let frameCount = 0;
                     let spreadDmg = 1.0 + (spreadLvl * 0.3);
                     
                     if (activePowerup === 'spread') {
-                        bullets.push(new Bullet(mouse.x, mouse.y - 15, -4, -12, false, false, false, spreadDmg)); 
-                        bullets.push(new Bullet(mouse.x, mouse.y - 15, 0, -12, false, false, false, spreadDmg)); 
-                        bullets.push(new Bullet(mouse.x, mouse.y - 15, 4, -12, false, false, false, spreadDmg));
+                        bullets.push(window.bulletPool.spawn(mouse.x, mouse.y - 15, -4, -12, false, false, false, spreadDmg)); 
+                        bullets.push(window.bulletPool.spawn(mouse.x, mouse.y - 15, 0, -12, false, false, false, spreadDmg)); 
+                        bullets.push(window.bulletPool.spawn(mouse.x, mouse.y - 15, 4, -12, false, false, false, spreadDmg));
                     } else if (activePowerup === 'laser') {
-                        bullets.push(new Bullet(mouse.x, mouse.y - 15, 0, -30, false, true, false, 1.0));
+                        bullets.push(window.bulletPool.spawn(mouse.x, mouse.y - 15, 0, -30, false, true, false, 1.0));
                     } else {
-                        bullets.push(new Bullet(mouse.x, mouse.y - 15, 0, -15, false, false, false, 1.0));
+                        bullets.push(window.bulletPool.spawn(mouse.x, mouse.y - 15, 0, -15, false, false, false, 1.0));
                     }
                 }
 
@@ -1268,28 +1369,28 @@ let frameCount = 0;
 
             for (let i = trailParticles.length - 1; i >= 0; i--) { trailParticles[i].update(); if (trailParticles[i].life <= 0) trailParticles.splice(i, 1); }
             for (let i = particles.length - 1; i >= 0; i--) { particles[i].update(); if (particles[i].life <= 0) particles.splice(i, 1); }
-            for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].update(); if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
+            for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].update(); if (floatingTexts[i].life <= 0) window.textPool.release(floatingTexts.splice(i, 1)[0]); }
             for (let i = gravityWells.length - 1; i >= 0; i--) { gravityWells[i].update(i); }
             
             for (let i = bullets.length - 1; i >= 0; i--) { 
                 bullets[i].update(); 
                 if (bullets[i].isEnemy && gameActive && !phaseShiftActive && Math.sqrt(Math.pow(bullets[i].x - mouse.x, 2) + Math.pow(bullets[i].y - mouse.y, 2)) < 15) {
-                    bullets.splice(i, 1); triggerShake(8); playSound('explosion');
+                    window.bulletPool.release(bullets.splice(i, 1)[0]); triggerShake(8); playSound('explosion');
                     
                     if (shieldActive) { 
                         shieldActive = false; document.getElementById('shield-indicator').style.display = 'none'; 
-                        floatingTexts.push(new FloatingText(mouse.x, mouse.y, "SHIELD BROKEN!", "#33ff88"));
+                        floatingTexts.push(window.textPool.spawn(mouse.x, mouse.y, "SHIELD BROKEN!", "#33ff88"));
                     } else {
                         playerArmor -= 35;
                         if(playerArmor < 0) {
                             playerHP += playerArmor; playerArmor = 0;
-                            floatingTexts.push(new FloatingText(mouse.x, mouse.y - 20, "HULL DAMAGE!", "#ff3300"));
+                            floatingTexts.push(window.textPool.spawn(mouse.x, mouse.y - 20, "HULL DAMAGE!", "#ff3300"));
                         } else {
-                            floatingTexts.push(new FloatingText(mouse.x, mouse.y - 20, "ARMOR HIT", "#00ffff"));
+                            floatingTexts.push(window.textPool.spawn(mouse.x, mouse.y - 20, "ARMOR HIT", "#00ffff"));
                         }
                         if (playerHP <= 0) triggerGameOver("DESTROYED BY ENEMY FIRE"); 
                     }
-                } else if (bullets[i].y < 0 || bullets[i].y > height) bullets.splice(i, 1); 
+                } else if (bullets[i].y < 0 || bullets[i].y > height) window.bulletPool.release(bullets.splice(i, 1)[0]); 
             }
 
             for (let i = droppedPowerups.length - 1; i >= 0; i--) {
@@ -1309,7 +1410,7 @@ let frameCount = 0;
 
                 if (gameActive && Math.sqrt(Math.pow(p.x - mouse.x, 2) + Math.pow(p.y - mouse.y, 2)) < 30) {
                     if (p.type === 'repair') {
-                        playerHP = maxHP; playerArmor = maxArmor; floatingTexts.push(new FloatingText(mouse.x, mouse.y, "HULL REPAIRED!", "#33ff88")); playSound('powerup');
+                        playerHP = maxHP; playerArmor = maxArmor; floatingTexts.push(window.textPool.spawn(mouse.x, mouse.y, "HULL REPAIRED!", "#33ff88")); playSound('powerup');
                     } else if (p.type === 'nuke') {
                         triggerEMP();
                     } else {
