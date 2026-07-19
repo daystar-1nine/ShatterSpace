@@ -36,13 +36,20 @@ let frameCount = 0;
         let width, height;
 
         function resizeCanvas() {
-            let winW = window.innerWidth; let winH = window.innerHeight;
+            let winW = window.innerWidth || document.documentElement.clientWidth || window.screen.width || 800;
+            let winH = window.innerHeight || document.documentElement.clientHeight || window.screen.height || 600;
+            if (winW === 0) winW = 800;
+            if (winH === 0) winH = 600;
             if (winW < 768) { width = canvas.width = 800; height = canvas.height = 800 * (winH / winW); } 
             else { width = canvas.width = winW; height = canvas.height = winH; }
             canvas.style.width = winW + 'px'; canvas.style.height = winH + 'px';
+            if (mouse && typeof mouse.x !== 'undefined') {
+                mouse.x = Math.max(0, Math.min(width, mouse.x));
+                mouse.y = Math.max(0, Math.min(height, mouse.y));
+            }
         }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
-        function getScale() { return canvas.width / window.innerWidth; }
+        function getScale() { return canvas.width / (window.innerWidth || document.documentElement.clientWidth || window.screen.width || 800); }
 
         let audioCtx = null;
         function initAudio() {
