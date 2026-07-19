@@ -1490,6 +1490,11 @@ let gameActive = false;
             enemies.forEach((e, i) => e.update(i)); bosses.forEach((b, i) => b.update(i)); asteroids.forEach(a => a.update()); diamonds.forEach(d => d.update()); meteors.forEach(m => m.update()); 
 
             if (gameActive) {
+                if (isNaN(mouse.x) || !isFinite(mouse.x)) mouse.x = width / 2;
+                if (isNaN(mouse.y) || !isFinite(mouse.y)) mouse.y = height / 2;
+                mouse.x = Math.max(20, Math.min(width - 20, mouse.x));
+                mouse.y = Math.max(20, Math.min(height - 20, mouse.y));
+                
                 ctx.save(); ctx.translate(mouse.x, mouse.y); 
                 if (phaseShiftActive) { ctx.globalAlpha = 0.4; ctx.shadowBlur = 15; ctx.shadowColor = '#00ffff'; }
                 drawShip(equippedShip); 
