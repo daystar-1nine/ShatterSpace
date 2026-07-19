@@ -56,7 +56,7 @@
 
         /* HUD ABILITIES - v1.3.1 */
         #hud-abilities { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; pointer-events: none; }
-        .hud-btn { width: 55px; height: 55px; border-radius: 50%; background: rgba(0,0,0,0.8); border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; overflow: hidden; transition: 0.2s; pointer-events: auto; }
+        .hud-btn { width: 55px; height: 55px; border-radius: 50%; background: rgba(0,0,0,0.8); border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; overflow: hidden; transition: 0.2s; pointer-events: auto; touch-action: manipulation; }
         .hud-btn.ready { box-shadow: 0 0 15px currentColor; }
         .hud-btn:active { transform: scale(0.9); }
         .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); height: 100%; transition: height 0.1s linear; }
@@ -69,7 +69,7 @@
         #prestige-btn { border-color: #ff00ff; color: #ff00ff; display: none; margin-top: 20px; }
 
         .menu-icons { position: absolute; bottom: 40px; display: flex; gap: 20px; justify-content: center; width: 100%; }
-        .icon-btn { background: rgba(0, 255, 255, 0.1); border: 2px solid #00ffff; color: #00ffff; font-size: 24px; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); }
+        .icon-btn { background: rgba(0, 255, 255, 0.1); border: 2px solid #00ffff; color: #00ffff; font-size: 24px; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); touch-action: manipulation; }
         .icon-btn:hover { background: #000 !important; color: #fff !important; transform: scale(1.15); box-shadow: 0 0 20px #00ffff; }
 
         .footer-text { position: absolute; bottom: 10px; width: 100%; text-align: center; color: rgba(255,255,255,0.3); font-size: 12px; font-weight: bold; letter-spacing: 1px; z-index: 100; pointer-events: none;}
@@ -160,7 +160,6 @@
         #ach-popup-text h4 { margin: 0; color: #ffaa00; font-size: 14px; font-weight: 900; letter-spacing: 1px; }
         #ach-popup-text p { margin: 2px 0 0 0; color: #fff; font-size: 12px; }
 
-        @media screen and (max-width: 900px) and (orientation: landscape) { #portrait-warning { display: flex; } #menu, #ui, canvas, .overlay-menu, .info-modal { display: none !important; } }
         @media screen and (max-width: 768px) {
             #menu-title { font-size: 32px; letter-spacing: 2px; }
             .menu-stats { font-size: 14px; } .menu-xp { font-size: 12px; } .btn { font-size: 14px; padding: 10px 20px; }

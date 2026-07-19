@@ -415,9 +415,61 @@ let gameActive = false;
             document.getElementById('btn-phase').addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); triggerPhase(); });
         });
 
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); updateInputPos(e.touches[0].clientX, e.touches[0].clientY); mouse.clicked = true; }, { passive: false });
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); updateInputPos(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-        canvas.addEventListener('touchend', (e) => { e.preventDefault(); mouse.clicked = false; }, { passive: false });
+        let activeTouchId = null;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+
+        canvas.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            if (activeTouchId === null) {
+                const touch = e.changedTouches[0];
+                activeTouchId = touch.identifier;
+                lastTouchX = touch.clientX;
+                lastTouchY = touch.clientY;
+                mouse.clicked = true;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => { 
+            e.preventDefault(); 
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === activeTouchId) {
+                    let scale = getScale();
+                    let deltaX = (touch.clientX - lastTouchX) * scale;
+                    let deltaY = (touch.clientY - lastTouchY) * scale;
+                    if (deltaX !== 0 || deltaY !== 0) mouse.angle = Math.atan2(deltaY, deltaX);
+                    mouse.x += deltaX * 1.5; 
+                    mouse.y += deltaY * 1.5;
+                    
+                    mouse.x = Math.max(0, Math.min(width, mouse.x));
+                    mouse.y = Math.max(0, Math.min(height, mouse.y));
+                    
+                    lastTouchX = touch.clientX;
+                    lastTouchY = touch.clientY;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => { 
+            e.preventDefault(); 
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    activeTouchId = null;
+                    mouse.clicked = false;
+                }
+            }
+        }, { passive: false });
+        
+        canvas.addEventListener('touchcancel', (e) => { 
+            e.preventDefault(); 
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    activeTouchId = null;
+                    mouse.clicked = false;
+                }
+            }
+        }, { passive: false });
         window.addEventListener('mousemove', (e) => updateInputPos(e.clientX, e.clientY));
         window.addEventListener('mousedown', (e) => { if(e.target === canvas) mouse.clicked = true; });
         window.addEventListener('mouseup', () => mouse.clicked = false);
