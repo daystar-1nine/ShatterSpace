@@ -376,10 +376,13 @@ let gameActive = false;
         function calcLevel() { return Math.floor(Math.sqrt(totalXP / 1000)) + 1; }
 
         function updateInputPos(clientX, clientY) {
+            if (clientX === undefined || clientY === undefined) return;
             let scale = getScale(); let scaledX = clientX * scale; let scaledY = clientY * scale;
             let dx = scaledX - mouse.x; let dy = scaledY - mouse.y;
             if (dx !== 0 || dy !== 0) mouse.angle = Math.atan2(dy, dx);
             mouse.x = scaledX; mouse.y = scaledY;
+            if (isNaN(mouse.x)) mouse.x = width / 2;
+            if (isNaN(mouse.y)) mouse.y = height / 2;
         }
 
         function triggerEMP() {
@@ -441,6 +444,9 @@ let gameActive = false;
                     if (deltaX !== 0 || deltaY !== 0) mouse.angle = Math.atan2(deltaY, deltaX);
                     mouse.x += deltaX * 1.5; 
                     mouse.y += deltaY * 1.5;
+                    
+                    if (isNaN(mouse.x)) mouse.x = width / 2;
+                    if (isNaN(mouse.y)) mouse.y = height / 2;
                     
                     mouse.x = Math.max(0, Math.min(width, mouse.x));
                     mouse.y = Math.max(0, Math.min(height, mouse.y));
